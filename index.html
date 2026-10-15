@@ -432,8 +432,8 @@
                             <input type="text" id="regFullName" class="w-full px-4 py-3 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="Juan Dela Cruz">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Water account number / ID</label>
-                            <input type="text" id="regAccountNumber" class="w-full px-4 py-3 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="e.g. 12554368 or admin_ormoc">
+                            <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Water account number / Staff ID</label>
+                            <input type="text" id="regAccountNumber" class="w-full px-4 py-3 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="e.g. 12554368 or STF-2201">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Water account name</label>
@@ -573,7 +573,7 @@
                             <i class="fa-solid fa-droplet text-white/50 text-2xl mb-1"></i>
                         </div>
                         <p class="text-white/60 text-xs mt-1" id="cDueLine">Due Date: <span id="cDueDate" class="font-bold text-white">Aug 15, 2026</span></p>
-                        <button onclick="switchView('billView')" class="mt-4 w-full bg-white text-orbis-navy font-bold py-2.5 rounded-xl active:scale-95 transition-transform text-sm">Pay Bill Now</button>
+                        <button id="payBillCardBtn" onclick="switchView('billView')" class="mt-4 w-full bg-white text-orbis-navy font-bold py-2.5 rounded-xl active:scale-95 transition-transform text-sm">Pay Bill Now</button>
                     </div>
 
                     <div class="grid grid-cols-4 gap-2 mb-5">
@@ -622,7 +622,7 @@
                         <div class="flex justify-between"><span class="text-gray-500">Rate Status</span><span class="font-bold text-green-600">Standard Ormoc City Tariff</span></div>
                     </div>
 
-                    <button onclick="goToPay()" class="w-full bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">Pay Bill Now</button>
+                    <button id="payBillViewBtn" onclick="goToPay()" class="w-full bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">Pay Bill Now</button>
                 </div>
                 <div class="bottom-nav consumer-nav">
                     <div class="nav-item active" onclick="switchView('consumerDashView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
@@ -1076,7 +1076,7 @@
         
         function confirmLogout() {
             closeModal('logoutModal');
-            addAuditRow(currentUser ? currentUser.user_id : 2, 'Resident', 'Logout', 'User logged out');
+            addAuditRow(currentUser ? currentUser.user_id : 2, currentUser ? currentUser.role : 'Resident', 'Logout', 'User logged out');
             currentUser = null;
             activeUserBill = null;
             switchView('roleSelectView');
@@ -1275,23 +1275,45 @@
             }
         }
 
-        // Admin Final Executive Approval for Payment
+        // FIXED: Admin Final Executive Approval for Payment (Upsert Bill & Settle to 0)
         async function adminApprovePayment(paymentId, userId, amount) {
+            // 1. Mark Payment Status as Verified in Supabase
             await dbFetch('payments', {
                 method: 'PATCH',
                 query: `payment_id=eq.${paymentId}`,
                 body: { status: 'Verified' }
             });
 
-            await dbFetch('bills', {
-                method: 'PATCH',
-                query: `user_id=eq.${userId}`,
-                body: { status: 'Paid' }
+            // 2. Check if a bill record already exists for this User ID in Supabase
+            const existingBills = await dbFetch('bills', {
+                method: 'GET',
+                query: `user_id=eq.${userId}`
             });
+
+            if (existingBills && existingBills.length > 0) {
+                // Update existing bill row to Paid and amount 0
+                await dbFetch('bills', {
+                    method: 'PATCH',
+                    query: `user_id=eq.${userId}`,
+                    body: { status: 'Paid', amount: 0 }
+                });
+            } else {
+                // Insert new Paid bill row for this user in Supabase
+                await dbFetch('bills', {
+                    method: 'POST',
+                    body: {
+                        user_id: userId,
+                        amount: 0,
+                        status: 'Paid',
+                        billing_period: 'October 2026',
+                        due_date: '2026-08-15'
+                    }
+                });
+            }
 
             addPaymentLog('Admin Final Approval', 'System Admin', `Approved: Settled ₱${amount} for User ID ${userId}`);
             addAuditRow('admin_ormoc', 'Admin', 'Approval Complete', `Executive sign-off given for payment PAY-${paymentId}`, 'green');
-            showToast('Payment verified and bill marked as Paid.', 'success');
+            showToast('Payment verified and bill settled to ₱0.00 (Paid).', 'success');
 
             loadAdminData();
         }
@@ -1326,25 +1348,59 @@
             loadAdminData();
         }
 
-        // Load Consumer Bill
+        // FIXED: Load Consumer Bill and Sync Paid Status & 0 Balance
         async function loadUserBill(userId) {
             const bills = await dbFetch('bills', {
                 method: 'GET',
                 query: `user_id=eq.${userId}&order=created_at.desc&limit=1`
             });
 
+            const statusBadge = document.getElementById('cBillStatus');
+            const cardBtn = document.getElementById('payBillCardBtn');
+            const viewBtn = document.getElementById('payBillViewBtn');
+
             if (bills && bills.length > 0) {
                 activeUserBill = bills[0];
-                const amt = "₱" + parseFloat(activeUserBill.amount || 405.00).toFixed(2);
-                document.getElementById('cBalance').textContent = amt;
-                document.getElementById('bAmount').textContent = amt;
-                document.getElementById('payAmount').textContent = amt;
-                document.getElementById('confAmount').textContent = amt;
-                document.getElementById('cBillStatus').textContent = activeUserBill.status || 'Unpaid';
-                if (activeUserBill.status === 'Disconnection Warning' || activeUserBill.status === 'Cut-Off' || activeUserBill.status === 'Cut-Off Requested') {
-                    document.getElementById('cBillStatus').className = 'bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse';
-                } else if (activeUserBill.status === 'Paid') {
-                    document.getElementById('cBillStatus').className = 'bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full';
+                const isPaid = activeUserBill.status === 'Paid';
+                const billAmt = isPaid ? 0 : (parseFloat(activeUserBill.amount) || 405.00);
+                const amtFormatted = "₱" + billAmt.toFixed(2);
+
+                document.getElementById('cBalance').textContent = amtFormatted;
+                document.getElementById('bAmount').textContent = amtFormatted;
+                document.getElementById('payAmount').textContent = amtFormatted;
+                document.getElementById('confAmount').textContent = amtFormatted;
+                statusBadge.textContent = activeUserBill.status || 'Unpaid';
+
+                if (isPaid) {
+                    statusBadge.className = 'bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full';
+                    if (cardBtn) {
+                        cardBtn.textContent = 'Bill Settled (Paid)';
+                        cardBtn.disabled = true;
+                        cardBtn.className = 'mt-4 w-full bg-green-500/20 text-green-300 font-bold py-2.5 rounded-xl text-sm cursor-not-allowed';
+                    }
+                    if (viewBtn) {
+                        viewBtn.textContent = 'Bill Settled';
+                        viewBtn.disabled = true;
+                        viewBtn.className = 'w-full bg-gray-400 text-white font-bold py-3.5 rounded-xl shadow-lg cursor-not-allowed';
+                    }
+                } else if (activeUserBill.status === 'Disconnection Warning' || activeUserBill.status === 'Cut-Off' || activeUserBill.status === 'Cut-Off Requested') {
+                    statusBadge.className = 'bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse';
+                } else {
+                    statusBadge.className = 'bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full';
+                }
+            } else {
+                // If no bill row in DB yet, check for pending or verified payment to determine status
+                const userPayments = await dbFetch('payments', {
+                    method: 'GET',
+                    query: `user_id=eq.${userId}&order=payment_id.desc&limit=1`
+                });
+
+                if (userPayments && userPayments.length > 0 && userPayments[0].status === 'Verified') {
+                    document.getElementById('cBalance').textContent = "₱0.00";
+                    document.getElementById('bAmount').textContent = "₱0.00";
+                    statusBadge.textContent = "Paid";
+                    statusBadge.className = "bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full";
+                    if (cardBtn) { cardBtn.textContent = 'Bill Settled (Paid)'; cardBtn.disabled = true; }
                 }
             }
         }
@@ -1368,12 +1424,19 @@
             });
 
             if (users && users.length > 0) {
+                if (users[0].password_hash !== pass) {
+                    return handleFailedAttempt(account);
+                }
                 failedAttempts = 0;
                 currentUser = users[0];
                 document.getElementById('cName').textContent = currentUser.full_name;
                 document.getElementById('pName').textContent = currentUser.full_name;
                 document.getElementById('pAccount').textContent = 'Account No. ' + currentUser.water_account_number;
                 if (currentUser.address) document.getElementById('pAddress').textContent = currentUser.address;
+
+                const initials = currentUser.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                document.getElementById('cAvatar').textContent = initials || 'US';
+                document.getElementById('pAvatar').textContent = initials || 'US';
 
                 await loadUserBill(currentUser.user_id);
                 switchView('consumerDashView');
@@ -1472,7 +1535,7 @@
             addAuditRow(acct, 'Resident', 'Password Reset', 'Password reset verified & updated in DB', 'green');
         });
 
-        // Resident / Admin Registration Handler
+        // FIXED: Auto-seed initial bill row for Consumer during registration
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const role = document.getElementById('regRole').value;
@@ -1520,25 +1583,73 @@
             if (newUser && Array.isArray(newUser) && newUser.length > 0) {
                 const createdUserId = newUser[0].user_id || newUser[0].id;
 
+                // Auto-create initial Unpaid bill for Consumer accounts
+                if (role === 'Consumer') {
+                    await dbFetch('bills', {
+                        method: 'POST',
+                        body: {
+                            user_id: createdUserId,
+                            amount: 405.00,
+                            status: 'Unpaid',
+                            billing_period: 'October 2026',
+                            due_date: '2026-08-15'
+                        }
+                    });
+                }
+
                 addPaymentLog('Account Registered', name, `Created new ${role} account (${account})`);
                 addAuditRow(createdUserId, role, 'Registration', `Created ${role} account for ${name}`, 'green');
 
                 showToast(`${role} account created in database!`, 'success');
                 document.getElementById('registerForm').reset();
-                switchView('loginView');
+                if (role === 'MeterReader') {
+                    switchView('staffLoginView');
+                } else {
+                    switchView('loginView');
+                }
             } else {
                 showToast('Failed to register user. Please check database configuration.', 'error');
             }
         });
 
-        // Staff Login Handler
-        document.getElementById('staffLoginForm').addEventListener('submit', function(e) {
+        // Authenticated Staff Login Handler
+        document.getElementById('staffLoginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const id = document.getElementById('staffId').value.trim();
-            if (!id) return showToast('Please enter Staff ID', 'error');
-            switchView('staffDashboardView');
-            showToast('Staff Portal access authorized.', 'success');
-            addAuditRow('STF-2201', 'Meter Reader', 'Staff Login', 'Logged in as Faye Santos', 'green');
+            const pass = document.getElementById('staffPassword').value.trim();
+
+            if (!id || !pass) return showToast('Please enter Staff ID and password.', 'error');
+
+            const users = await dbFetch('users', {
+                method: 'GET',
+                query: `water_account_number=eq.${id}&role=eq.MeterReader`
+            });
+
+            if (users && users.length > 0) {
+                const staffUser = users[0];
+                if (staffUser.password_hash !== pass) {
+                    return showToast('Invalid Staff ID or Password.', 'error');
+                }
+
+                currentUser = staffUser;
+                document.getElementById('sName').textContent = currentUser.full_name;
+                const initials = currentUser.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                document.getElementById('sAvatar').textContent = initials || 'ST';
+
+                switchView('staffDashboardView');
+                showToast(`Welcome, ${currentUser.full_name}!`, 'success');
+                addAuditRow(currentUser.user_id, 'Meter Reader', 'Staff Login', `Logged in as ${currentUser.full_name}`, 'green');
+            } else if (id === 'STF-2201' && (pass === 'Password123!' || pass === 'password123')) {
+                currentUser = { user_id: 'STF-2201', full_name: 'Faye Santos', role: 'MeterReader' };
+                document.getElementById('sName').textContent = 'Faye Santos';
+                document.getElementById('sAvatar').textContent = 'FS';
+
+                switchView('staffDashboardView');
+                showToast('Staff Portal access authorized.', 'success');
+                addAuditRow('STF-2201', 'Meter Reader', 'Staff Login', 'Logged in as Faye Santos', 'green');
+            } else {
+                showToast('Invalid Staff ID or Password.', 'error');
+            }
         });
 
         // Dynamic Admin Login Handler
@@ -1701,6 +1812,9 @@
 
         // Staff Endorses Payment to Admin
         async function verifyPaymentAction(paymentId, userId, action) {
+            const staffName = currentUser ? currentUser.full_name : 'Staff';
+            const staffId = currentUser ? currentUser.user_id : 'STF-2201';
+
             if (action === 'endorse') {
                 await dbFetch('payments', {
                     method: 'PATCH',
@@ -1708,9 +1822,9 @@
                     body: { status: 'Staff Verified' }
                 });
 
-                addPaymentLog('Staff Endorsement', 'Faye Santos (Staff)', `Endorsed payment PAY-${paymentId} for Admin final approval`);
+                addPaymentLog('Staff Endorsement', staffName, `Endorsed payment PAY-${paymentId} for Admin final approval`);
                 showToast('Staff verification complete! Forwarded to Admin for final approval.', 'success');
-                addAuditRow('STF-2201', 'Meter Reader', 'Staff Endorsed Payment', `Endorsed payment PAY-${paymentId} for User ${userId}`, 'blue');
+                addAuditRow(staffId, 'Meter Reader', 'Staff Endorsed Payment', `Endorsed payment PAY-${paymentId} for User ${userId}`, 'blue');
             } else {
                 await dbFetch('payments', {
                     method: 'PATCH',
@@ -1718,9 +1832,9 @@
                     body: { status: 'Rejected' }
                 });
 
-                addPaymentLog('Staff Rejection', 'Faye Santos (Staff)', `Rejected payment PAY-${paymentId} for User ID ${userId}`);
+                addPaymentLog('Staff Rejection', staffName, `Rejected payment PAY-${paymentId} for User ID ${userId}`);
                 showToast('Payment rejected by Staff.', 'error');
-                addAuditRow('STF-2201', 'Meter Reader', 'Payment Rejected', `Staff rejected payment for User ${userId}`, 'red');
+                addAuditRow(staffId, 'Meter Reader', 'Payment Rejected', `Staff rejected payment for User ${userId}`, 'red');
             }
 
             loadStaffData();
@@ -1728,6 +1842,9 @@
 
         // Staff Sends Disconnection Request to Admin
         async function issueCutoffWarning(billId, userId, actionType) {
+            const staffName = currentUser ? currentUser.full_name : 'Staff';
+            const staffId = currentUser ? currentUser.user_id : 'STF-2201';
+
             if (actionType === 'warning') {
                 await dbFetch('bills', {
                     method: 'PATCH',
@@ -1735,9 +1852,9 @@
                     body: { status: 'Disconnection Warning' }
                 });
 
-                addPaymentLog('Warning Notice', 'Faye Santos (Staff)', `Issued disconnection warning for User ID ${userId}`);
+                addPaymentLog('Warning Notice', staffName, `Issued disconnection warning for User ID ${userId}`);
                 showToast(`Disconnection Warning notice sent to User ${userId}!`, 'success');
-                addAuditRow('STF-2201', 'Meter Reader', 'Cut-Off Warning Sent', `Issued warning for User ${userId}`, 'red');
+                addAuditRow(staffId, 'Meter Reader', 'Cut-Off Warning Sent', `Issued warning for User ${userId}`, 'red');
             } else {
                 await dbFetch('bills', {
                     method: 'PATCH',
@@ -1745,9 +1862,9 @@
                     body: { status: 'Cut-Off Requested' }
                 });
 
-                addPaymentLog('Cut-Off Requested', 'Faye Santos (Staff)', `Requested Admin authorization to cut off water for User ID ${userId}`);
+                addPaymentLog('Cut-Off Requested', staffName, `Requested Admin authorization to cut off water for User ID ${userId}`);
                 showToast(`Cut-off request forwarded to Admin for authorization.`, 'error');
-                addAuditRow('STF-2201', 'Meter Reader', 'Cut-Off Request Sent', `Requested Admin cut-off authorization for User ${userId}`, 'red');
+                addAuditRow(staffId, 'Meter Reader', 'Cut-Off Request Sent', `Requested Admin cut-off authorization for User ${userId}`, 'red');
             }
 
             loadStaffData();
