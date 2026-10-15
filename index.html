@@ -1,0 +1,1854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ORBIS - Mobile Water Billing System | Ormoc City</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Baloo 2', 'sans-serif'],
+                    },
+                    colors: {
+                        orbis: {
+                            navy: '#212D4B',
+                            navyDeep: '#161E33',
+                            light: '#BEC8DE',
+                            off: '#EAEDF4',
+                            header: '#4B5876',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body {
+            background-color: #11172A;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .device-frame {
+            width: 100%;
+            max-width: 390px;
+            height: 844px;
+            max-height: 95vh;
+            background-color: #000;
+            border-radius: 48px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 10px #0f172a;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: max-width .45s ease, height .45s ease, border-radius .45s ease;
+        }
+        .device-frame.ipad {
+            max-width: 1120px;
+            height: 780px;
+            border-radius: 34px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), inset 0 0 0 8px #0f172a;
+        }
+
+        .status-bar {
+            height: 46px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 26px 0 26px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            z-index: 50;
+            position: absolute;
+            top: 0; left: 0;
+            color: #ffffff;
+        }
+        .device-frame.ipad .notch,
+        .device-frame.ipad .status-bar { display: none; }
+
+        .notch {
+            position: absolute;
+            top: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 110px; height: 26px;
+            background-color: #000;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+        }
+
+        .view-container {
+            flex: 1;
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding-top: 46px;
+            background-color: #212D4B;
+        }
+        .view-container::-webkit-scrollbar { display: none; }
+
+        .view {
+            display: none;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; min-height: 100%;
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+            box-sizing: border-box;
+        }
+        .view.active {
+            display: flex;
+            flex-direction: column;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .bottom-nav {
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 100%; height: 76px;
+            border-radius: 26px 26px 0 0;
+            z-index: 40;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 0 6px 14px 6px;
+            background-color: #EAEDF4;
+            border-top: 1px solid rgba(33,45,75,0.08);
+        }
+
+        .toast {
+            position: absolute;
+            top: 56px; left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        .modal-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(22, 30, 51, 0.65);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .sub-header {
+            background-color: #4B5876;
+            padding: 18px 20px 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .nav-item { display:flex; flex-direction:column; align-items:center; gap:4px; color:#7C88A6; cursor:pointer; }
+        .nav-item.active { color:#212D4B; }
+        .nav-underline { display:none; width:18px; height:3px; border-radius:2px; background:#212D4B; margin-top:1px; }
+        .nav-item.active .nav-underline { display:block; }
+
+        .staff-nav { background-color: #212D4B; border-top: none; }
+        .staff-nav .nav-item { color: #7C88A6; }
+        .staff-nav .nav-item.active { color: #fff; }
+        .staff-nav .nav-underline { background: #fff; }
+
+        .admin-nav-item {
+            display: flex; align-items: center; gap: 12px; width: 100%;
+            padding: 10px 14px; border-radius: 10px;
+            color: #9AA6C4; font-size: 13px; font-weight: 600; text-align: left;
+            transition: background .2s ease, color .2s ease;
+        }
+        .admin-nav-item i { width: 18px; text-align: center; font-size: 14px; }
+        .admin-nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+        .admin-nav-item.active { background: rgba(190,200,222,0.14); color: #fff; box-shadow: inset 3px 0 0 #BEC8DE; }
+    </style>
+</head>
+<body>
+
+    <div class="device-frame" id="deviceFrame">
+
+        <!-- Status Bar -->
+        <div id="statusBar" class="status-bar">
+            <span id="clock" class="pl-1">9:41</span>
+            <div class="notch"></div>
+            <div class="flex gap-2 items-center pr-1">
+                <i class="fa-solid fa-signal text-[10px]"></i>
+                <i class="fa-solid fa-wifi text-[10px]"></i>
+                <i class="fa-solid fa-battery-full text-[12px]"></i>
+            </div>
+        </div>
+
+        <!-- Notification Toast -->
+        <div id="toast" class="toast px-4 py-3 rounded-full shadow-lg flex items-center gap-3 text-sm font-semibold max-w-[90%] w-max">
+            <i id="toastIcon" class="fa-solid"></i>
+            <span id="toastMessage">Notification</span>
+        </div>
+
+        <!-- Logout Confirmation Modal -->
+        <div id="logoutModal" class="modal-overlay">
+            <div class="bg-white p-6 rounded-3xl w-[85%] max-w-sm text-center shadow-2xl">
+                <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </div>
+                <h3 class="text-xl font-bold text-orbis-navy mb-2 font-display">Log Out</h3>
+                <p class="text-gray-500 text-sm mb-6">Are you sure you want to log out of ORBIS?</p>
+                <div class="flex gap-3">
+                    <button onclick="closeModal('logoutModal')" class="flex-1 py-3 px-4 rounded-xl font-semibold text-orbis-navy bg-gray-100 hover:bg-gray-200">Cancel</button>
+                    <button onclick="confirmLogout()" class="flex-1 py-3 px-4 rounded-xl font-semibold text-white bg-red-500 hover:bg-red-600">Log Out</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- OTP Display Modal -->
+        <div id="otpModal" class="modal-overlay">
+            <div class="bg-white p-6 rounded-3xl w-[85%] max-w-sm text-center shadow-2xl relative">
+                <div class="w-14 h-14 bg-blue-100 text-orbis-navy rounded-full flex items-center justify-center text-2xl mx-auto mb-3">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h3 class="text-lg font-bold text-orbis-navy font-display">OTP Code Generated</h3>
+                <p class="text-xs text-gray-500 mt-1 mb-4">Code written to `otp_codes` table in Supabase:</p>
+                <div class="bg-orbis-navy text-white text-3xl font-extrabold tracking-widest py-3 px-4 rounded-2xl mb-4 font-mono select-all" id="otpCodeDisplay">
+                    ------
+                </div>
+                <button onclick="closeModal('otpModal')" class="w-full py-3 rounded-xl font-bold text-white bg-orbis-navy active:scale-95 transition-transform">
+                    Enter Verification Code
+                </button>
+            </div>
+        </div>
+
+        <div class="view-container" id="mainContainer">
+
+            <!-- ROLE SELECT VIEW -->
+            <div id="roleSelectView" class="view active flex-col justify-center px-6 bg-orbis-navy min-h-full pt-12 pb-10">
+                <div class="text-center mb-8">
+                    <div class="w-20 h-20 mx-auto rounded-full bg-orbis-light border-4 border-orbis-light/30 flex items-center justify-center shadow-xl mb-3">
+                        <i class="fa-solid fa-droplet text-orbis-navy text-3xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-extrabold text-white font-display tracking-wide">ORBIS</h1>
+                    <p class="text-[11px] text-orbis-light/70 mt-0.5">Ormoc Water Billing Information System</p>
+                </div>
+
+                <p class="text-center text-orbis-light/80 text-[11px] font-bold uppercase tracking-wider mb-4">Continue As</p>
+
+                <div class="flex flex-col gap-3.5">
+                    <!-- Resident Button -->
+                    <button onclick="switchView('loginView')" class="w-full bg-orbis-light text-orbis-navy p-3.5 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center gap-3.5 group text-left">
+                        <div class="w-11 h-11 rounded-xl bg-orbis-navy/10 flex items-center justify-center text-orbis-navy text-lg flex-shrink-0 group-hover:bg-orbis-navy group-hover:text-white transition-colors">
+                            <i class="fa-solid fa-house-user"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-sm leading-snug">Resident</div>
+                            <div class="text-[11px] text-orbis-navy/70 font-medium">Payment Submission</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs text-orbis-navy/40 pr-1"></i>
+                    </button>
+
+                    <!-- Staff Button -->
+                    <button onclick="switchView('staffLoginView')" class="w-full bg-orbis-light text-orbis-navy p-3.5 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center gap-3.5 group text-left">
+                        <div class="w-11 h-11 rounded-xl bg-orbis-navy/10 flex items-center justify-center text-orbis-navy text-lg flex-shrink-0 group-hover:bg-orbis-navy group-hover:text-white transition-colors">
+                            <i class="fa-solid fa-id-badge"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-sm leading-snug">Staff / Meter Reader</div>
+                            <div class="text-[11px] text-orbis-navy/70 font-medium">Staff Review & Verification</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs text-orbis-navy/40 pr-1"></i>
+                    </button>
+
+                    <!-- Admin Button -->
+                    <button onclick="switchView('adminLoginView')" class="w-full bg-orbis-light text-orbis-navy p-3.5 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center gap-3.5 group text-left">
+                        <div class="w-11 h-11 rounded-xl bg-orbis-navy/10 flex items-center justify-center text-orbis-navy text-lg flex-shrink-0 group-hover:bg-orbis-navy group-hover:text-white transition-colors">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-sm leading-snug">Admin Console</div>
+                            <div class="text-[11px] text-orbis-navy/70 font-medium">Executive Final Approval</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs text-orbis-navy/40 pr-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- RESIDENT LOGIN VIEW -->
+            <div id="loginView" class="view flex-col justify-center px-7 bg-orbis-navy min-h-full pb-10">
+                <button onclick="switchView('roleSelectView')" class="absolute top-12 left-5 w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-white">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <div class="text-center mb-6 pt-2">
+                    <div class="w-20 h-20 mx-auto rounded-full bg-orbis-light flex items-center justify-center shadow-lg mb-3">
+                        <i class="fa-solid fa-droplet text-orbis-navy text-2xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-white font-display tracking-wide">ORBIS</h1>
+                </div>
+
+                <h2 class="text-center text-white font-bold text-lg font-display mb-4">RESIDENT LOGIN</h2>
+
+                <div class="mb-5 bg-white/10 p-3 rounded-2xl">
+                    <p class="text-[10px] text-orbis-light font-bold uppercase text-center mb-2">Supabase Registered Accounts</p>
+                    <div class="grid grid-cols-2 gap-1.5 text-[11px]" id="quickSelectAccounts">
+                        <button type="button" onclick="fillDemo('12554368', 'Password123!')" class="bg-white/15 hover:bg-white/25 text-white py-1.5 px-2 rounded-lg text-left truncate">
+                            <i class="fa-solid fa-user mr-1 text-[10px]"></i>Rico Ramos
+                        </button>
+                        <button type="button" onclick="fillDemo('KT-123', 'Password123!')" class="bg-white/15 hover:bg-white/25 text-white py-1.5 px-2 rounded-lg text-left truncate">
+                            <i class="fa-solid fa-user mr-1 text-[10px]"></i>Katarina Son
+                        </button>
+                    </div>
+                </div>
+
+                <form id="loginForm" class="flex flex-col gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-orbis-light uppercase tracking-wider mb-2 ml-1">Water Account Number</label>
+                        <input type="text" id="loginUser" autocomplete="off" class="w-full px-4 py-3.5 bg-orbis-navyDeep border border-white/15 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-light" placeholder="e.g. 12554368">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-orbis-light uppercase tracking-wider mb-2 ml-1">Password</label>
+                        <div class="relative">
+                            <input type="password" id="loginPass" class="w-full px-4 py-3.5 pr-11 bg-orbis-navyDeep border border-white/15 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-light" placeholder="Enter password">
+                            <button type="button" onclick="togglePassword('loginPass', 'eyeIcon')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white">
+                                <i id="eyeIcon" class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="loginSubmitBtn" class="mt-2 w-full bg-orbis-light text-orbis-navy font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">
+                        Log In
+                    </button>
+                </form>
+
+                <div class="mt-6 text-center space-y-2">
+                    <p class="text-sm text-orbis-light">Forgot password? <a href="#" onclick="switchView('recoveryView')" class="text-white font-bold hover:underline">Recover OTP</a></p>
+                    <p class="text-sm text-orbis-light">New resident? <a href="#" onclick="switchView('registerView')" class="text-white font-bold hover:underline">Register Here</a></p>
+                </div>
+            </div>
+
+            <!-- OTP RECOVERY VIEW -->
+            <div id="recoveryView" class="view flex-col justify-center px-7 bg-orbis-navy min-h-full pb-10">
+                <button onclick="switchView('loginView')" class="absolute top-12 left-5 w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-white">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <div class="text-center mb-6">
+                    <div class="w-20 h-20 mx-auto rounded-full bg-orbis-light flex items-center justify-center shadow-lg mb-3">
+                        <i class="fa-solid fa-key text-orbis-navy text-2xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-white font-display">OTP Recovery</h1>
+                    <p class="text-xs text-orbis-light/70 mt-1">Reset password via `otp_codes` table</p>
+                </div>
+
+                <form id="otpForm" class="flex flex-col gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-orbis-light uppercase tracking-wider mb-2 ml-1">Water Account Number</label>
+                        <input type="text" id="otpAccount" class="w-full px-4 py-3.5 bg-orbis-navyDeep border border-white/15 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-light" placeholder="e.g. 12554368">
+                    </div>
+                    <button type="submit" class="mt-1 w-full bg-orbis-light text-orbis-navy font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">
+                        Generate & Insert OTP to DB
+                    </button>
+                </form>
+
+                <form id="otpVerifyForm" class="hidden flex-col gap-3 mt-4">
+                    <div class="bg-green-500/20 border border-green-500/30 p-3 rounded-xl text-center mb-1">
+                        <p class="text-xs text-green-300 font-semibold">Active Code: <span class="font-extrabold text-white text-base font-mono" id="demoOtpDisplay">------</span></p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-orbis-light uppercase tracking-wider mb-1 ml-1">6-Digit OTP Code</label>
+                        <input type="text" id="otpInput" maxlength="6" class="w-full text-center tracking-widest text-lg font-bold px-4 py-3 bg-orbis-navyDeep border border-white/15 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orbis-light" placeholder="000000">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-orbis-light uppercase tracking-wider mb-1 ml-1">New Password</label>
+                        <div class="relative">
+                            <input type="password" id="newPass" class="w-full px-4 py-3 pr-11 bg-orbis-navyDeep border border-white/15 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-light" placeholder="Min 8 chars, Upper/Lower/Num">
+                            <button type="button" onclick="togglePassword('newPass', 'otpEyeIcon')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white">
+                                <i id="otpEyeIcon" class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="mt-2 w-full bg-green-500 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">
+                        Verify OTP & Update Password
+                    </button>
+                </form>
+            </div>
+
+            <!-- REGISTER VIEW -->
+            <div id="registerView" class="view flex-col bg-orbis-navy min-h-full pb-10">
+                <div class="pt-6 px-6 pb-6 text-center relative">
+                    <button onclick="switchView('loginView')" class="absolute top-6 left-6 w-9 h-9 bg-white/10 rounded-full flex items-center justify-center text-white">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <div class="w-16 h-16 mx-auto rounded-full bg-orbis-light flex items-center justify-center shadow-lg mb-2">
+                        <i class="fa-solid fa-droplet text-orbis-navy text-xl"></i>
+                    </div>
+                    <h1 class="text-lg font-bold text-white font-display tracking-wide">ORBIS</h1>
+                </div>
+
+                <div class="bg-orbis-light rounded-t-[32px] flex-1 px-6 pt-6 pb-8">
+                    <h2 class="text-xl font-bold text-orbis-navy font-display text-center">Complete your profile</h2>
+                    <p class="text-xs text-orbis-navy/70 text-center mt-1 mb-6">Link your water account to continue</p>
+
+                    <form id="registerForm" class="flex flex-col gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Account Role</label>
+                            <select id="regRole" class="w-full px-4 py-3 bg-white border border-white rounded-xl text-sm text-orbis-navy focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm font-semibold">
+                                <option value="Consumer">Resident (Consumer)</option>
+                                <option value="MeterReader">Staff (Meter Reader)</option>
+                                <option value="Admin">System Administrator (Admin)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Full Name</label>
+                            <input type="text" id="regFullName" class="w-full px-4 py-3 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="Juan Dela Cruz">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Water account number / ID</label>
+                            <input type="text" id="regAccountNumber" class="w-full px-4 py-3 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="e.g. 12554368 or admin_ormoc">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Water account name</label>
+                            <input type="text" id="regAccountName" class="w-full px-4 py-3 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="Name on water account">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Address</label>
+                            <input type="text" id="regAddress" class="w-full px-4 py-3 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="Brgy., street, house no.">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Mobile number</label>
+                            <input type="tel" id="regMobile" class="w-full px-4 py-3 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="09xx xxx xxxx">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Password</label>
+                            <div class="relative">
+                                <input type="password" id="regPassword" class="w-full px-4 py-3 pr-11 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="Min 8 chars, Upper, Lower, Num, Special">
+                                <button type="button" onclick="togglePassword('regPassword', 'regEyeIcon')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-orbis-navy">
+                                    <i id="regEyeIcon" class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Confirm Password</label>
+                            <div class="relative">
+                                <input type="password" id="regConfirmPassword" class="w-full px-4 py-3 pr-11 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="Re-enter password">
+                                <button type="button" onclick="togglePassword('regConfirmPassword', 'regConfirmEyeIcon')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-orbis-navy">
+                                    <i id="regConfirmEyeIcon" class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="registerSubmitBtn" class="mt-3 w-full bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">
+                            Save Account to Database
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- STAFF LOGIN VIEW -->
+            <div id="staffLoginView" class="view flex-col bg-orbis-light min-h-full">
+                <div class="sub-header relative justify-center !pt-12 !pb-5">
+                    <button onclick="switchView('roleSelectView')" class="absolute left-5 bottom-4 w-9 h-9 bg-white/15 rounded-full flex items-center justify-center text-white">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <h2 class="text-white font-bold text-lg font-display">Staff Portal (Review & Verification)</h2>
+                </div>
+
+                <div class="px-7 pt-6 pb-10 flex flex-col items-center flex-1">
+                    <div class="w-20 h-20 rounded-full bg-orbis-navy mb-3 flex items-center justify-center">
+                        <i class="fa-solid fa-id-badge text-orbis-light text-2xl"></i>
+                    </div>
+                    <h1 class="text-xl font-bold text-orbis-navy font-display text-center">ORBIS Staff Reviewer</h1>
+                    <p class="text-xs text-orbis-navy/60 text-center mt-1 mb-5">Verify Submissions & Endorse to Admin</p>
+
+                    <button type="button" onclick="fillStaffDemo('STF-2201', 'Password123!')" class="w-full mb-4 bg-orbis-navy/10 border border-orbis-navy/20 py-2 px-3 rounded-xl text-xs font-semibold text-orbis-navy hover:bg-orbis-navy/20 transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-user-check"></i> Fill Staff Demo: Faye Santos (STF-2201)
+                    </button>
+
+                    <form id="staffLoginForm" class="w-full flex flex-col gap-4">
+                        <div class="bg-white rounded-2xl p-3.5 shadow-sm">
+                            <label class="block text-xs font-semibold text-orbis-navy/70 text-center mb-1.5">Staff ID</label>
+                            <input type="text" id="staffId" class="w-full text-center px-3 py-2 border border-gray-200 rounded-lg text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy" placeholder="e.g. STF-2201">
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-3.5 shadow-sm">
+                            <label class="block text-xs font-semibold text-orbis-navy/70 text-center mb-1.5">Password</label>
+                            <input type="password" id="staffPassword" class="w-full text-center px-3 py-2 border border-gray-200 rounded-lg text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy" placeholder="Enter password">
+                        </div>
+
+                        <button type="submit" id="staffLoginBtn" class="mt-2 w-full bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">
+                            Log in
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ADMIN LOGIN VIEW -->
+            <div id="adminLoginView" class="view flex-col items-center justify-center bg-orbis-light min-h-full px-6">
+                <button onclick="switchView('roleSelectView')" class="absolute top-5 left-5 w-10 h-10 bg-orbis-navy/10 rounded-full flex items-center justify-center text-orbis-navy">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+
+                <div class="w-full max-w-[340px] flex flex-col items-center">
+                    <div class="w-20 h-20 rounded-full bg-orbis-navy mb-4 flex items-center justify-center">
+                        <i class="fa-solid fa-user-shield text-orbis-light text-2xl"></i>
+                    </div>
+                    <h1 class="text-xl font-bold text-orbis-navy font-display text-center">ORBIS Admin Console</h1>
+                    <p class="text-xs text-orbis-navy/60 text-center mt-1 mb-5">Executive Approvals & Control</p>
+
+                    <button type="button" onclick="fillAdminDemo()" class="w-full mb-4 bg-orbis-navy/10 border border-orbis-navy/20 py-2 px-3 rounded-xl text-xs font-semibold text-orbis-navy hover:bg-orbis-navy/20 transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-shield-halved"></i> Fill Admin Demo (admin_ormoc)
+                    </button>
+
+                    <form id="adminLoginForm" class="w-full flex flex-col gap-4">
+                        <div class="bg-white rounded-2xl p-3.5 shadow-sm">
+                            <label class="block text-xs font-semibold text-orbis-navy/70 text-center mb-1.5">Admin ID / Water Account</label>
+                            <input type="text" id="adminUser" class="w-full text-center px-3 py-2 border border-gray-200 rounded-lg text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy" placeholder="e.g. admin_ormoc">
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-3.5 shadow-sm">
+                            <label class="block text-xs font-semibold text-orbis-navy/70 text-center mb-1.5">Password</label>
+                            <input type="password" id="adminPass" class="w-full text-center px-3 py-2 border border-gray-200 rounded-lg text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy" placeholder="Enter password">
+                        </div>
+
+                        <button type="submit" id="adminLoginBtn" class="mt-2 w-full bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">
+                            Log in
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- CONSUMER DASHBOARD -->
+            <div id="consumerDashView" class="view flex-col bg-orbis-light min-h-full pb-24">
+                <div class="bg-orbis-header px-6 pt-9 pb-6 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white font-bold" id="cAvatar">RR</div>
+                        <div>
+                            <p class="text-white/70 text-xs mb-0.5">Hello</p>
+                            <h2 class="text-white font-bold text-lg font-display" id="cName">Rico Ramos</h2>
+                        </div>
+                    </div>
+                    <button onclick="switchView('notificationsView')" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white relative">
+                        <i class="fa-solid fa-bell"></i>
+                        <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border border-orbis-header"></span>
+                    </button>
+                </div>
+
+                <div class="px-5 -mt-2 relative z-10">
+                    <div class="bg-orbis-navy rounded-2xl p-5 shadow-lg mb-4" id="billCardContainer">
+                        <div class="flex justify-between items-start">
+                            <p class="text-white/70 text-xs font-semibold uppercase tracking-wide">Current Water Bill</p>
+                            <span class="bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full" id="cBillStatus">Unpaid</span>
+                        </div>
+                        <div class="flex justify-between items-end mt-1">
+                            <h1 class="text-3xl font-extrabold text-white" id="cBalance">₱405.00</h1>
+                            <i class="fa-solid fa-droplet text-white/50 text-2xl mb-1"></i>
+                        </div>
+                        <p class="text-white/60 text-xs mt-1" id="cDueLine">Due Date: <span id="cDueDate" class="font-bold text-white">Aug 15, 2026</span></p>
+                        <button onclick="switchView('billView')" class="mt-4 w-full bg-white text-orbis-navy font-bold py-2.5 rounded-xl active:scale-95 transition-transform text-sm">Pay Bill Now</button>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-2 mb-5">
+                        <button onclick="switchView('billView')" class="bg-white rounded-2xl py-3 px-1 border border-orbis-navy/15 flex flex-col items-center gap-2 active:scale-95 transition-transform">
+                            <i class="fa-regular fa-file-lines text-orbis-navy text-lg"></i>
+                            <span class="text-[10px] font-semibold text-orbis-navy text-center leading-tight">View Bill</span>
+                        </button>
+                        <button onclick="switchView('paymentHistoryView')" class="bg-white rounded-2xl py-3 px-1 border border-orbis-navy/15 flex flex-col items-center gap-2 active:scale-95 transition-transform">
+                            <i class="fa-regular fa-clock text-orbis-navy text-lg"></i>
+                            <span class="text-[10px] font-semibold text-orbis-navy text-center leading-tight">History</span>
+                        </button>
+                        <button onclick="switchView('notificationsView')" class="bg-white rounded-2xl py-3 px-1 border border-orbis-navy/15 flex flex-col items-center gap-2 active:scale-95 transition-transform">
+                            <i class="fa-regular fa-bell text-orbis-navy text-lg"></i>
+                            <span class="text-[10px] font-semibold text-orbis-navy text-center leading-tight">Alerts</span>
+                        </button>
+                        <button onclick="switchView('waterUsageView')" class="bg-white rounded-2xl py-3 px-1 border border-orbis-navy/15 flex flex-col items-center gap-2 active:scale-95 transition-transform">
+                            <i class="fa-solid fa-droplet text-orbis-navy text-lg"></i>
+                            <span class="text-[10px] font-semibold text-orbis-navy text-center leading-tight">Usage</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bottom-nav consumer-nav">
+                    <div class="nav-item active" onclick="switchView('consumerDashView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('notificationsView')"><i class="fa-solid fa-bell text-lg"></i><span class="text-[10px] font-medium">Alerts</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('profileView')"><i class="fa-solid fa-user text-lg"></i><span class="text-[10px] font-medium">Profile</span><span class="nav-underline"></span></div>
+                </div>
+            </div>
+
+            <!-- YOUR BILL VIEW -->
+            <div id="billView" class="view flex-col bg-orbis-light min-h-full pb-24">
+                <div class="sub-header">
+                    <button onclick="switchView('consumerDashView')" class="w-9 h-9 bg-white/15 rounded-full flex items-center justify-center text-white"><i class="fa-solid fa-chevron-left"></i></button>
+                    <h2 class="text-white font-bold font-display">Your Water Bill</h2>
+                </div>
+                <div class="px-5 pt-5">
+                    <div class="bg-orbis-navy rounded-2xl p-5 shadow-lg mb-4 text-center">
+                        <p class="text-white/70 text-xs font-semibold uppercase tracking-wide">Total amount due</p>
+                        <h1 class="text-3xl font-extrabold text-white mt-1" id="bAmount">₱405.00</h1>
+                        <span class="inline-block mt-2 bg-white/15 text-white text-xs font-semibold px-3 py-1 rounded-full" id="bDueDate">Due Aug 15, 2026</span>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-4 shadow-sm mb-4 space-y-2 text-xs">
+                        <div class="flex justify-between border-b pb-2"><span class="text-gray-500">Billing Period</span><span class="font-bold text-orbis-navy">October 2026</span></div>
+                        <div class="flex justify-between border-b pb-2"><span class="text-gray-500">Water Consumption</span><span class="font-bold text-orbis-navy" id="bConsumption">19 cu.m.</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Rate Status</span><span class="font-bold text-green-600">Standard Ormoc City Tariff</span></div>
+                    </div>
+
+                    <button onclick="goToPay()" class="w-full bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">Pay Bill Now</button>
+                </div>
+                <div class="bottom-nav consumer-nav">
+                    <div class="nav-item active" onclick="switchView('consumerDashView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('notificationsView')"><i class="fa-solid fa-bell text-lg"></i><span class="text-[10px] font-medium">Alerts</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('profileView')"><i class="fa-solid fa-user text-lg"></i><span class="text-[10px] font-medium">Profile</span><span class="nav-underline"></span></div>
+                </div>
+            </div>
+
+            <!-- NOTIFICATIONS VIEW -->
+            <div id="notificationsView" class="view flex-col bg-orbis-light min-h-full pb-24">
+                <div class="sub-header">
+                    <button onclick="switchView('consumerDashView')" class="w-9 h-9 bg-white/15 rounded-full flex items-center justify-center text-white"><i class="fa-solid fa-chevron-left"></i></button>
+                    <h2 class="text-white font-bold font-display">System Notifications</h2>
+                </div>
+                <div class="px-5 pt-5">
+                    <div id="notificationsList" class="flex flex-col gap-3">
+                        <p class="text-center text-xs text-gray-400 py-6">Loading notifications from `notifications` table...</p>
+                    </div>
+                </div>
+                <div class="bottom-nav consumer-nav">
+                    <div class="nav-item" onclick="switchView('consumerDashView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
+                    <div class="nav-item active" onclick="switchView('notificationsView')"><i class="fa-solid fa-bell text-lg"></i><span class="text-[10px] font-medium">Alerts</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('profileView')"><i class="fa-solid fa-user text-lg"></i><span class="text-[10px] font-medium">Profile</span><span class="nav-underline"></span></div>
+                </div>
+            </div>
+
+            <!-- PAYMENT HISTORY VIEW -->
+            <div id="paymentHistoryView" class="view flex-col bg-orbis-light min-h-full pb-24">
+                <div class="sub-header">
+                    <button onclick="switchView('consumerDashView')" class="w-9 h-9 bg-white/15 rounded-full flex items-center justify-center text-white"><i class="fa-solid fa-chevron-left"></i></button>
+                    <h2 class="text-white font-bold font-display">Payment History</h2>
+                </div>
+                <div class="px-5 pt-5">
+                    <div id="historyList" class="flex flex-col gap-3">
+                        <p class="text-center text-xs text-gray-400 py-6">Loading payments from `payments` table...</p>
+                    </div>
+                </div>
+                <div class="bottom-nav consumer-nav">
+                    <div class="nav-item active" onclick="switchView('consumerDashView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('notificationsView')"><i class="fa-solid fa-bell text-lg"></i><span class="text-[10px] font-medium">Alerts</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('profileView')"><i class="fa-solid fa-user text-lg"></i><span class="text-[10px] font-medium">Profile</span><span class="nav-underline"></span></div>
+                </div>
+            </div>
+
+            <!-- PAY BILL VIEW -->
+            <div id="payBillView" class="view flex-col bg-orbis-light min-h-full pb-24">
+                <div class="sub-header">
+                    <button onclick="switchView('billView')" class="w-9 h-9 bg-white/15 rounded-full flex items-center justify-center text-white"><i class="fa-solid fa-chevron-left"></i></button>
+                    <h2 class="text-white font-bold font-display">Pay Bill</h2>
+                </div>
+                <div class="px-5 pt-5">
+                    <div class="bg-orbis-navy rounded-2xl p-5 shadow-lg mb-5 text-center">
+                        <p class="text-white/70 text-xs font-semibold uppercase tracking-wide">Total amount to pay</p>
+                        <h1 class="text-3xl font-extrabold text-white mt-1" id="payAmount">₱405.00</h1>
+                    </div>
+                    <button onclick="startPayment()" class="w-full bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">Submit Payment</button>
+                </div>
+                <div class="bottom-nav consumer-nav">
+                    <div class="nav-item active" onclick="switchView('consumerDashView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('notificationsView')"><i class="fa-solid fa-bell text-lg"></i><span class="text-[10px] font-medium">Alerts</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('profileView')"><i class="fa-solid fa-user text-lg"></i><span class="text-[10px] font-medium">Profile</span><span class="nav-underline"></span></div>
+                </div>
+            </div>
+
+            <!-- PAYMENT CONFIRMATION VIEW -->
+            <div id="confirmationView" class="view flex-col bg-orbis-light min-h-full pb-24">
+                <div class="sub-header justify-center">
+                    <h2 class="text-white font-bold font-display">Payment Submitted</h2>
+                </div>
+                <div class="px-5 pt-8 text-center flex-1 flex flex-col justify-center items-center">
+                    <div class="w-20 h-20 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center text-3xl mb-4 shadow-inner">
+                        <i class="fa-solid fa-hourglass-half"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-orbis-navy font-display mb-1">Awaiting Staff Review</h2>
+                    <p class="text-xs text-gray-500 max-w-[260px] mb-6">Recorded in `payments` table. Pending staff endorsement before final Admin approval.</p>
+                    <div class="bg-white rounded-2xl p-4 shadow-sm w-full max-w-xs text-left text-xs space-y-2 mb-6">
+                        <div class="flex justify-between"><span class="text-gray-400">Reference No.</span><span class="font-bold text-orbis-navy" id="confRef">TXN-984712502</span></div>
+                        <div class="flex justify-between"><span class="text-gray-400">Status</span><span class="font-bold text-amber-500">Pending Staff Review</span></div>
+                        <div class="flex justify-between"><span class="text-gray-400">Amount</span><span class="font-bold text-orbis-navy" id="confAmount">₱405.00</span></div>
+                    </div>
+                    <button onclick="switchView('consumerDashView')" class="w-full bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">
+                        Return to Dashboard
+                    </button>
+                </div>
+            </div>
+
+            <!-- WATER USAGE VIEW -->
+            <div id="waterUsageView" class="view flex-col bg-orbis-light min-h-full pb-24">
+                <div class="sub-header">
+                    <button onclick="switchView('consumerDashView')" class="w-9 h-9 bg-white/15 rounded-full flex items-center justify-center text-white"><i class="fa-solid fa-chevron-left"></i></button>
+                    <h2 class="text-white font-bold font-display">Water Usage</h2>
+                </div>
+                <div class="px-5 pt-5">
+                    <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
+                        <p class="text-xs text-gray-500">This month's consumption</p>
+                        <h1 class="text-3xl font-extrabold text-orbis-navy mt-1" id="uConsumption">19 cu.m.</h1>
+                        <p class="text-green-600 text-xs font-semibold mt-1"><i class="fa-solid fa-arrow-trend-down mr-1"></i>12% lower than last month</p>
+                    </div>
+                </div>
+                <div class="bottom-nav consumer-nav">
+                    <div class="nav-item active" onclick="switchView('consumerDashView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('notificationsView')"><i class="fa-solid fa-bell text-lg"></i><span class="text-[10px] font-medium">Alerts</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('profileView')"><i class="fa-solid fa-user text-lg"></i><span class="text-[10px] font-medium">Profile</span><span class="nav-underline"></span></div>
+                </div>
+            </div>
+
+            <!-- PROFILE VIEW -->
+            <div id="profileView" class="view flex-col bg-orbis-light min-h-full pb-24">
+                <div class="sub-header">
+                    <div class="w-9 h-9"></div>
+                    <h2 class="text-white font-bold font-display">Profile</h2>
+                </div>
+                <div class="px-5 pt-6 flex flex-col items-center">
+                    <div class="w-20 h-20 rounded-full bg-orbis-navy text-white flex items-center justify-center text-2xl font-bold mb-3" id="pAvatar">RR</div>
+                    <h2 class="font-bold text-orbis-navy font-display text-lg" id="pName">Rico Ramos</h2>
+                    <p class="text-xs text-gray-500 mb-2" id="pAccount">Account No. 12554368</p>
+                    <p class="text-xs text-gray-400 mb-6" id="pAddress">Brgy. Linao, Ormoc City</p>
+                    <button onclick="openModal('logoutModal')" class="w-full bg-red-500 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">
+                        <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Log Out
+                    </button>
+                </div>
+                <div class="bottom-nav consumer-nav">
+                    <div class="nav-item" onclick="switchView('consumerDashView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('notificationsView')"><i class="fa-solid fa-bell text-lg"></i><span class="text-[10px] font-medium">Alerts</span><span class="nav-underline"></span></div>
+                    <div class="nav-item active" onclick="switchView('profileView')"><i class="fa-solid fa-user text-lg"></i><span class="text-[10px] font-medium">Profile</span><span class="nav-underline"></span></div>
+                </div>
+            </div>
+
+            <!-- STAFF DASHBOARD -->
+            <div id="staffDashboardView" class="view bg-orbis-light min-h-full pb-24">
+                <div class="sub-header text-left flex items-center gap-3 !pt-12 !pb-4">
+                    <div class="w-10 h-10 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white text-sm font-bold" id="sAvatar">FS</div>
+                    <div>
+                        <p class="text-white/60 text-[11px]">Staff Portal (Review & Verification)</p>
+                        <h2 class="text-white font-bold text-base font-display" id="sName">Faye Santos</h2>
+                    </div>
+                </div>
+                <div class="px-5 pt-5">
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-orbis-navy rounded-2xl p-4">
+                            <p class="text-white/60 text-[11px] font-semibold">Payments to Endorse</p>
+                            <h3 class="text-white text-2xl font-extrabold mt-1" id="statPending">0</h3>
+                        </div>
+                        <div class="bg-orbis-navy rounded-2xl p-4">
+                            <p class="text-white/60 text-[11px] font-semibold">Unpaid Bills</p>
+                            <h3 class="text-white text-2xl font-extrabold mt-1" id="statUnpaid">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 mb-4">
+                        <button onclick="switchStaffTab('payments')" id="btnTabPayments" class="flex-1 py-2.5 rounded-xl font-bold text-xs bg-orbis-navy text-white shadow">Payments Queue</button>
+                        <button onclick="switchStaffTab('unpaid')" id="btnTabUnpaid" class="flex-1 py-2.5 rounded-xl font-bold text-xs bg-white text-orbis-navy border border-orbis-navy/20">Unpaid & Cut-Offs</button>
+                    </div>
+
+                    <!-- Staff Payments Queue Section -->
+                    <div id="staffPaymentsTab" class="space-y-3">
+                        <p class="text-xs font-bold text-orbis-navy uppercase tracking-wider mb-1">Awaiting Staff Endorsement (`payments` table)</p>
+                        <div id="staffQueue">
+                            <p class="text-center text-xs text-gray-400 py-6">Loading pending payments...</p>
+                        </div>
+                    </div>
+
+                    <!-- Staff Unpaid & Cut-off Warnings Section -->
+                    <div id="staffUnpaidTab" class="hidden space-y-3">
+                        <p class="text-xs font-bold text-orbis-navy uppercase tracking-wider mb-1">Unpaid Bills & Cut-Off Requests (`bills` table)</p>
+                        <div id="staffUnpaidQueue">
+                            <p class="text-center text-xs text-gray-400 py-6">Loading unpaid bills...</p>
+                        </div>
+                    </div>
+
+                    <button onclick="openModal('logoutModal')" class="w-full bg-red-500 text-white font-bold py-3 rounded-xl active:scale-95 transition-transform mt-4">Log Out</button>
+                </div>
+                <div class="bottom-nav staff-nav">
+                    <div class="nav-item active" onclick="switchView('staffDashboardView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="openModal('logoutModal')"><i class="fa-solid fa-user text-lg"></i><span class="text-[10px] font-medium">Profile</span><span class="nav-underline"></span></div>
+                </div>
+            </div>
+
+            <!-- ADMIN CONSOLE -->
+            <div id="adminDashView" class="view bg-orbis-off" style="height:100%;">
+                <div style="display:flex; flex:1; min-height:0; width:100%;">
+                    <aside class="w-60 flex-shrink-0 bg-orbis-navyDeep flex flex-col">
+                        <div class="px-5 pt-6 pb-5 flex items-center gap-3 border-b border-white/5">
+                            <div class="w-10 h-10 rounded-full bg-orbis-light flex items-center justify-center"><i class="fa-solid fa-droplet text-orbis-navy"></i></div>
+                            <div>
+                                <h2 class="text-white font-bold text-lg font-display leading-none">ORBIS</h2>
+                                <p class="text-[10px] text-orbis-light/60 mt-1 uppercase tracking-wider">Admin Console</p>
+                            </div>
+                        </div>
+                        <nav class="flex-1 overflow-y-auto px-3 py-4 flex flex-col gap-1.5">
+                            <button id="adminNavApprovals" class="admin-nav-item active" onclick="switchAdminTab('approvals')">
+                                <i class="fa-solid fa-file-circle-check"></i>
+                                <span>Pending Approvals</span>
+                                <span id="badgePendingApprovals" class="ml-auto bg-amber-400 text-orbis-navy text-[10px] font-extrabold px-2 py-0.5 rounded-full">0</span>
+                            </button>
+                            <button id="adminNavUsers" class="admin-nav-item" onclick="switchAdminTab('users')">
+                                <i class="fa-solid fa-users"></i>
+                                <span>User Directory</span>
+                            </button>
+                            <button id="adminNavLogs" class="admin-nav-item" onclick="switchAdminTab('logs')">
+                                <i class="fa-solid fa-list-check"></i>
+                                <span>Audit Log Trails</span>
+                            </button>
+                            <button class="admin-nav-item mt-auto text-red-400 hover:text-red-300" onclick="openModal('logoutModal')">
+                                <i class="fa-solid fa-right-from-bracket"></i>
+                                <span>Log Out</span>
+                            </button>
+                        </nav>
+                    </aside>
+
+                    <main class="flex-1 overflow-y-auto p-7">
+                        <header class="bg-white rounded-2xl p-5 shadow-sm mb-6 flex justify-between items-center">
+                            <div>
+                                <h1 class="text-xl font-bold text-orbis-navy font-display">System Administration & Executive Control</h1>
+                                <p class="text-xs text-gray-400">Ormoc City Central Office · Executive Approvals</p>
+                            </div>
+                            <button onclick="loadAdminData()" class="bg-orbis-navy text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow hover:bg-orbis-navyDeep transition-colors flex items-center gap-2">
+                                <i class="fa-solid fa-rotate-right"></i> Refresh DB Data
+                            </button>
+                        </header>
+
+                        <!-- KPI Stat Cards -->
+                        <div class="grid grid-cols-4 gap-4 mb-6">
+                            <div class="bg-white rounded-2xl p-4 shadow-sm border border-orbis-navy/5">
+                                <p class="text-gray-400 text-[11px] font-semibold uppercase">Total Revenue Settled</p>
+                                <h2 class="text-2xl font-extrabold text-orbis-navy mt-1" id="admStatRevenue">₱0.00</h2>
+                                <p class="text-green-600 text-[10px] font-bold mt-1"><i class="fa-solid fa-circle-check mr-1"></i>Verified in DB</p>
+                            </div>
+                            <div class="bg-white rounded-2xl p-4 shadow-sm border border-orbis-navy/5">
+                                <p class="text-gray-400 text-[11px] font-semibold uppercase">Registered Accounts</p>
+                                <h2 class="text-2xl font-extrabold text-orbis-navy mt-1" id="admStatUsers">0</h2>
+                                <p class="text-blue-500 text-[10px] font-bold mt-1"><i class="fa-solid fa-user-group mr-1"></i>`users` table</p>
+                            </div>
+                            <div class="bg-white rounded-2xl p-4 shadow-sm border border-orbis-navy/5">
+                                <p class="text-gray-400 text-[11px] font-semibold uppercase">Staff Approvals Pending</p>
+                                <h2 class="text-2xl font-extrabold text-amber-500 mt-1" id="admStatPendingApprovals">0</h2>
+                                <p class="text-amber-500 text-[10px] font-bold mt-1"><i class="fa-solid fa-clock mr-1"></i>Awaiting Approval</p>
+                            </div>
+                            <div class="bg-white rounded-2xl p-4 shadow-sm border border-orbis-navy/5">
+                                <p class="text-gray-400 text-[11px] font-semibold uppercase">Cut-Off Warnings</p>
+                                <h2 class="text-2xl font-extrabold text-red-500 mt-1" id="admStatCutoffs">0</h2>
+                                <p class="text-red-500 text-[10px] font-bold mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Supply Cut Requests</p>
+                            </div>
+                        </div>
+
+                        <!-- TAB 1: Executive Approval Queue -->
+                        <div id="adminTabApprovals" class="space-y-6">
+                            <div class="bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-sm font-bold text-orbis-navy font-display flex items-center gap-2">
+                                        <i class="fa-solid fa-signature text-amber-500"></i>
+                                        Endorsed Payments Awaiting Final Admin Sign-Off
+                                    </h3>
+                                    <span class="text-xs text-gray-400 font-medium">Endorsed by Staff (`payments` table)</span>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse text-xs">
+                                        <thead>
+                                            <tr class="border-b border-gray-200 text-gray-400">
+                                                <th class="py-2.5 px-3">Payment ID</th>
+                                                <th class="py-2.5 px-3">User ID</th>
+                                                <th class="py-2.5 px-3">Amount</th>
+                                                <th class="py-2.5 px-3">Method / Ref</th>
+                                                <th class="py-2.5 px-3">Staff Endorsement</th>
+                                                <th class="py-2.5 px-3 text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="adminPaymentsTable">
+                                            <tr><td colspan="6" class="text-center py-6 text-gray-400">Loading pending endorsements...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-sm font-bold text-orbis-navy font-display flex items-center gap-2">
+                                        <i class="fa-solid fa-faucet-drip text-red-500"></i>
+                                        Water Disconnection Requests Recommended by Staff
+                                    </h3>
+                                    <span class="text-xs text-gray-400 font-medium">Staff Requested Cut-Offs (`bills` table)</span>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse text-xs">
+                                        <thead>
+                                            <tr class="border-b border-gray-200 text-gray-400">
+                                                <th class="py-2.5 px-3">Bill ID</th>
+                                                <th class="py-2.5 px-3">User ID</th>
+                                                <th class="py-2.5 px-3">Unpaid Amount</th>
+                                                <th class="py-2.5 px-3">Bill Status</th>
+                                                <th class="py-2.5 px-3 text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="adminCutoffsTable">
+                                            <tr><td colspan="5" class="text-center py-6 text-gray-400">No pending disconnection requests.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: User Accounts Directory -->
+                        <div id="adminTabUsers" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
+                            <h3 class="text-sm font-bold text-orbis-navy font-display mb-4">Registered System Users (`users` Table)</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="border-b border-gray-200 text-gray-400">
+                                            <th class="py-2 px-3">ID</th>
+                                            <th class="py-2 px-3">Full Name</th>
+                                            <th class="py-2 px-3">Account Number / ID</th>
+                                            <th class="py-2 px-3">Role</th>
+                                            <th class="py-2 px-3">Address</th>
+                                            <th class="py-2 px-3">Mobile</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminUsersTable">
+                                        <tr><td colspan="6" class="text-center py-6 text-gray-400">Loading user directory...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: Live System Audit Logs -->
+                        <div id="adminTabLogs" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
+                            <h3 class="text-sm font-bold text-orbis-navy font-display mb-4">Live System Audit Trails (`audit_logs` Table)</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="border-b border-gray-200 text-gray-400">
+                                            <th class="py-2 px-3">Timestamp</th>
+                                            <th class="py-2 px-3">User / Role</th>
+                                            <th class="py-2 px-3">Action Type</th>
+                                            <th class="py-2 px-3">Details / Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="auditTrailTable">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Core Engine -->
+    <script>
+        const SUPABASE_URL = "https://cirxzqobgixsdwexoksq.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnh6cW9iZ2l4c2R3ZXhva3NxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwMTM4MzcsImV4cCI6MjEwNzU4OTgzN30.TbCZX8DiVu9Recs4H8R6z63j12xl8U9L24qP67oL5xk";
+
+        let currentUser = null;
+        let activeUserBill = null;
+        let failedAttempts = 0;
+        let lockoutUntil = null;
+
+        // Core Supabase REST API Fetch Helper
+        async function dbFetch(table, options = {}) {
+            const method = options.method || 'GET';
+            const body = options.body ? JSON.stringify(options.body) : null;
+            const query = options.query ? `?${options.query}` : '';
+            
+            const headers = {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_KEY,
+                'Authorization': 'Bearer ' + SUPABASE_KEY,
+                'Prefer': options.prefer || 'return=representation'
+            };
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
+                    method,
+                    headers,
+                    body
+                });
+                
+                if (!response.ok) {
+                    const errText = await response.text();
+                    console.error(`Supabase ${table} HTTP ${response.status}:`, errText);
+                    return null;
+                }
+                return await response.json();
+            } catch (err) {
+                console.error(`Supabase ${table} network error:`, err);
+                return null;
+            }
+        }
+
+        function fillDemo(acct, pass) {
+            document.getElementById('loginUser').value = acct;
+            document.getElementById('loginPass').value = pass;
+            showToast('Demo credentials filled for account ' + acct, 'info');
+        }
+
+        function fillStaffDemo(id, pass) {
+            document.getElementById('staffId').value = id;
+            document.getElementById('staffPassword').value = pass;
+            showToast('Staff credentials filled for Faye Santos', 'info');
+        }
+
+        function fillAdminDemo() {
+            document.getElementById('adminUser').value = 'admin_ormoc';
+            document.getElementById('adminPass').value = 'Password123!';
+            showToast('Admin credentials filled', 'info');
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toastMessage');
+            const iconEl = document.getElementById('toastIcon');
+
+            toast.className = 'toast px-4 py-3 rounded-full shadow-lg flex items-center gap-3 text-sm font-semibold max-w-[90%] w-max';
+            iconEl.className = 'fa-solid';
+
+            if (type === 'error') {
+                toast.classList.add('bg-red-100', 'text-red-700', 'border', 'border-red-200');
+                iconEl.classList.add('fa-circle-exclamation');
+            } else if (type === 'success') {
+                toast.classList.add('bg-green-100', 'text-green-700', 'border', 'border-green-200');
+                iconEl.classList.add('fa-circle-check');
+            } else {
+                toast.classList.add('bg-blue-100', 'text-blue-700', 'border', 'border-blue-200');
+                iconEl.classList.add('fa-circle-info');
+            }
+
+            msgEl.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+
+        function switchView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            document.getElementById('deviceFrame').classList.toggle('ipad', viewId === 'adminLoginView' || viewId === 'adminDashView');
+
+            if (viewId === 'adminDashView') {
+                loadAdminData();
+            } else if (viewId === 'staffDashboardView') {
+                loadStaffData();
+            } else if (viewId === 'notificationsView') {
+                loadUserNotifications();
+            } else if (viewId === 'paymentHistoryView') {
+                loadUserPayments();
+            }
+        }
+
+        function openModal(modalId) { document.getElementById(modalId).classList.add('active'); }
+        function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
+        
+        function confirmLogout() {
+            closeModal('logoutModal');
+            addAuditRow(currentUser ? currentUser.user_id : 2, 'Resident', 'Logout', 'User logged out');
+            currentUser = null;
+            activeUserBill = null;
+            switchView('roleSelectView');
+            showToast('Successfully logged out.', 'success');
+        }
+
+        function togglePassword(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (!input || !icon) return;
+            input.type = input.type === 'password' ? 'text' : 'password';
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
+        }
+
+        // Database Audit Logger
+        async function addAuditRow(userId, role, action, details, color = 'blue') {
+            const userLabel = typeof userId === 'number' ? `User ID ${userId}` : userId;
+
+            const table = document.getElementById('auditTrailTable');
+            if (table) {
+                const now = new Date();
+                const timeStr = now.toISOString().slice(0, 16).replace('T', ' ');
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-100';
+                row.innerHTML = `
+                    <td class="py-2.5 px-3">${timeStr}</td>
+                    <td class="py-2.5 px-3 font-semibold">${userLabel} (${role})</td>
+                    <td class="py-2.5 px-3"><span class="bg-${color}-100 text-${color}-700 px-2 py-0.5 rounded-full font-bold">${action}</span></td>
+                    <td class="py-2.5 px-3">${details}</td>
+                `;
+                table.insertBefore(row, table.firstChild);
+            }
+
+            await dbFetch('audit_logs', {
+                method: 'POST',
+                body: {
+                    user_id: typeof userId === 'number' ? userId : 2,
+                    user_role: role,
+                    action: action,
+                    details: details,
+                    ip_address: '127.0.0.1'
+                }
+            });
+        }
+
+        // Payment Log Helper
+        async function addPaymentLog(action, performedBy, details) {
+            try {
+                await dbFetch('payment_logs', {
+                    method: 'POST',
+                    body: {
+                        action: action,
+                        performed_by: String(performedBy),
+                        details: details
+                    }
+                });
+            } catch (err) {
+                console.warn('Payment log write skipped:', err);
+            }
+        }
+
+        // Toggle Admin Executive Navigation Tabs
+        function switchAdminTab(tab) {
+            const tApprovals = document.getElementById('adminTabApprovals');
+            const tUsers = document.getElementById('adminTabUsers');
+            const tLogs = document.getElementById('adminTabLogs');
+
+            const btnA = document.getElementById('adminNavApprovals');
+            const btnU = document.getElementById('adminNavUsers');
+            const btnL = document.getElementById('adminNavLogs');
+
+            [tApprovals, tUsers, tLogs].forEach(t => t.classList.add('hidden'));
+            [btnA, btnU, btnL].forEach(b => b.classList.remove('active'));
+
+            if (tab === 'approvals') {
+                tApprovals.classList.remove('hidden');
+                btnA.classList.add('active');
+            } else if (tab === 'users') {
+                tUsers.classList.remove('hidden');
+                btnU.classList.add('active');
+            } else {
+                tLogs.classList.remove('hidden');
+                btnL.classList.add('active');
+                loadAuditLogs();
+            }
+        }
+
+        // Load Executive Admin Dashboard Data
+        async function loadAdminData() {
+            // 1. Fetch Verified Payments for Total Revenue Stat
+            const verifiedPayments = await dbFetch('payments', {
+                method: 'GET',
+                query: 'status=eq.Verified&select=amount'
+            });
+            let totalRevenue = 0;
+            if (verifiedPayments && Array.isArray(verifiedPayments)) {
+                verifiedPayments.forEach(p => totalRevenue += parseFloat(p.amount || 0));
+            }
+            document.getElementById('admStatRevenue').textContent = '₱' + totalRevenue.toFixed(2);
+
+            // 2. Fetch Users Directory
+            const allUsers = await dbFetch('users', {
+                method: 'GET',
+                query: 'select=*&order=user_id.asc'
+            });
+            const usersTable = document.getElementById('adminUsersTable');
+            if (allUsers && Array.isArray(allUsers) && allUsers.length > 0) {
+                document.getElementById('admStatUsers').textContent = allUsers.length;
+                usersTable.innerHTML = '';
+                allUsers.forEach(u => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-100';
+                    row.innerHTML = `
+                        <td class="py-2.5 px-3 font-bold">${u.user_id}</td>
+                        <td class="py-2.5 px-3 font-semibold text-orbis-navy">${u.full_name}</td>
+                        <td class="py-2.5 px-3 font-mono">${u.water_account_number}</td>
+                        <td class="py-2.5 px-3">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${u.role === 'Admin' ? 'bg-purple-100 text-purple-700' : (u.role === 'MeterReader' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700')}">
+                                ${u.role || 'Consumer'}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-gray-500">${u.address || 'Ormoc City'}</td>
+                        <td class="py-2.5 px-3 text-gray-500">${u.mobile_number || 'N/A'}</td>
+                    `;
+                    usersTable.appendChild(row);
+                });
+            }
+
+            // 3. Fetch Endorsed Payments Awaiting Admin Approval
+            const staffApprovedPayments = await dbFetch('payments', {
+                method: 'GET',
+                query: 'status=eq.Staff Verified&select=*'
+            });
+
+            const paymentsTable = document.getElementById('adminPaymentsTable');
+            if (staffApprovedPayments && Array.isArray(staffApprovedPayments) && staffApprovedPayments.length > 0) {
+                document.getElementById('admStatPendingApprovals').textContent = staffApprovedPayments.length;
+                document.getElementById('badgePendingApprovals').textContent = staffApprovedPayments.length;
+                paymentsTable.innerHTML = '';
+                staffApprovedPayments.forEach(p => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-100';
+                    row.innerHTML = `
+                        <td class="py-3 px-3 font-mono">PAY-${p.payment_id}</td>
+                        <td class="py-3 px-3 font-bold">User ${p.user_id}</td>
+                        <td class="py-3 px-3 font-extrabold text-orbis-navy">₱${parseFloat(p.amount).toFixed(2)}</td>
+                        <td class="py-3 px-3">${p.payment_method} (${p.reference_number})</td>
+                        <td class="py-3 px-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Endorsed by Staff</span></td>
+                        <td class="py-3 px-3 text-right">
+                            <div class="flex justify-end gap-1.5">
+                                <button onclick="adminRejectPayment(${p.payment_id}, ${p.user_id})" class="px-2.5 py-1 rounded-lg bg-red-50 text-red-600 font-bold hover:bg-red-100">Reject</button>
+                                <button onclick="adminApprovePayment(${p.payment_id}, ${p.user_id}, ${p.amount})" class="px-3 py-1 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 shadow-sm">
+                                    <i class="fa-solid fa-check mr-1"></i>Final Approve
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    paymentsTable.appendChild(row);
+                });
+            } else {
+                document.getElementById('admStatPendingApprovals').textContent = '0';
+                document.getElementById('badgePendingApprovals').textContent = '0';
+                paymentsTable.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">No staff-endorsed payments awaiting Admin approval.</td></tr>';
+            }
+
+            // 4. Fetch Disconnection Cut-off Requests
+            const cutoffBills = await dbFetch('bills', {
+                method: 'GET',
+                query: 'status=eq.Cut-Off Requested&select=*'
+            });
+
+            const cutoffsTable = document.getElementById('adminCutoffsTable');
+            if (cutoffBills && Array.isArray(cutoffBills) && cutoffBills.length > 0) {
+                document.getElementById('admStatCutoffs').textContent = cutoffBills.length;
+                cutoffsTable.innerHTML = '';
+                cutoffBills.forEach(b => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-100';
+                    row.innerHTML = `
+                        <td class="py-3 px-3 font-mono">BILL-${b.bill_id}</td>
+                        <td class="py-3 px-3 font-bold">User ${b.user_id}</td>
+                        <td class="py-3 px-3 font-extrabold text-red-600">₱${parseFloat(b.amount).toFixed(2)}</td>
+                        <td class="py-3 px-3"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">Recommended for Cut-Off</span></td>
+                        <td class="py-3 px-3 text-right">
+                            <button onclick="adminApproveCutoff(${b.bill_id}, ${b.user_id})" class="px-3 py-1 rounded-lg bg-red-600 text-white font-bold hover:bg-red-700 shadow-sm">
+                                <i class="fa-solid fa-ban mr-1"></i>Authorize Water Cut-Off
+                            </button>
+                        </td>
+                    `;
+                    cutoffsTable.appendChild(row);
+                });
+            } else {
+                document.getElementById('admStatCutoffs').textContent = '0';
+                cutoffsTable.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400">No pending disconnection requests.</td></tr>';
+            }
+        }
+
+        // Admin Final Executive Approval for Payment
+        async function adminApprovePayment(paymentId, userId, amount) {
+            await dbFetch('payments', {
+                method: 'PATCH',
+                query: `payment_id=eq.${paymentId}`,
+                body: { status: 'Verified' }
+            });
+
+            await dbFetch('bills', {
+                method: 'PATCH',
+                query: `user_id=eq.${userId}`,
+                body: { status: 'Paid' }
+            });
+
+            addPaymentLog('Admin Final Approval', 'System Admin', `Approved: Settled ₱${amount} for User ID ${userId}`);
+            addAuditRow('admin_ormoc', 'Admin', 'Approval Complete', `Executive sign-off given for payment PAY-${paymentId}`, 'green');
+            showToast('Payment verified and bill marked as Paid.', 'success');
+
+            loadAdminData();
+        }
+
+        // Admin Reject Payment
+        async function adminRejectPayment(paymentId, userId) {
+            await dbFetch('payments', {
+                method: 'PATCH',
+                query: `payment_id=eq.${paymentId}`,
+                body: { status: 'Rejected' }
+            });
+
+            addPaymentLog('Admin Rejection', 'System Admin', `Admin rejected payment PAY-${paymentId} for User ID ${userId}`);
+            addAuditRow('admin_ormoc', 'Admin', 'Payment Rejected', `Admin rejected payment PAY-${paymentId}`, 'red');
+            showToast('Payment submission rejected by Admin.', 'error');
+
+            loadAdminData();
+        }
+
+        // Admin Authorize Water Cut-Off
+        async function adminApproveCutoff(billId, userId) {
+            await dbFetch('bills', {
+                method: 'PATCH',
+                query: `bill_id=eq.${billId}`,
+                body: { status: 'Cut-Off' }
+            });
+
+            addPaymentLog('Water Cut-Off Authorized', 'System Admin', `Execution: Disconnected water supply for User ID ${userId}`);
+            addAuditRow('admin_ormoc', 'Admin', 'Cut-Off Executed', `Authorized water supply disconnection for User ID ${userId}`, 'red');
+            showToast(`Water service cut-off executed for User ID ${userId}.`, 'error');
+
+            loadAdminData();
+        }
+
+        // Load Consumer Bill
+        async function loadUserBill(userId) {
+            const bills = await dbFetch('bills', {
+                method: 'GET',
+                query: `user_id=eq.${userId}&order=created_at.desc&limit=1`
+            });
+
+            if (bills && bills.length > 0) {
+                activeUserBill = bills[0];
+                const amt = "₱" + parseFloat(activeUserBill.amount || 405.00).toFixed(2);
+                document.getElementById('cBalance').textContent = amt;
+                document.getElementById('bAmount').textContent = amt;
+                document.getElementById('payAmount').textContent = amt;
+                document.getElementById('confAmount').textContent = amt;
+                document.getElementById('cBillStatus').textContent = activeUserBill.status || 'Unpaid';
+                if (activeUserBill.status === 'Disconnection Warning' || activeUserBill.status === 'Cut-Off' || activeUserBill.status === 'Cut-Off Requested') {
+                    document.getElementById('cBillStatus').className = 'bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse';
+                } else if (activeUserBill.status === 'Paid') {
+                    document.getElementById('cBillStatus').className = 'bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full';
+                }
+            }
+        }
+
+        // Resident Login Handler
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const account = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+
+            if (!account || !pass) return showToast('Please enter water account and password.', 'error');
+
+            if (lockoutUntil && new Date() < lockoutUntil) {
+                const secs = Math.ceil((lockoutUntil - new Date()) / 1000);
+                return showToast(`Account locked. Retry in ${secs}s.`, 'error');
+            }
+
+            const users = await dbFetch('users', {
+                method: 'GET',
+                query: `water_account_number=eq.${account}`
+            });
+
+            if (users && users.length > 0) {
+                failedAttempts = 0;
+                currentUser = users[0];
+                document.getElementById('cName').textContent = currentUser.full_name;
+                document.getElementById('pName').textContent = currentUser.full_name;
+                document.getElementById('pAccount').textContent = 'Account No. ' + currentUser.water_account_number;
+                if (currentUser.address) document.getElementById('pAddress').textContent = currentUser.address;
+
+                await loadUserBill(currentUser.user_id);
+                switchView('consumerDashView');
+                showToast('Welcome back, ' + currentUser.full_name, 'success');
+                addAuditRow(currentUser.user_id, 'Resident', 'Login Successful', 'Authenticated against users table', 'green');
+            } else {
+                handleFailedAttempt(account);
+            }
+        });
+
+        function handleFailedAttempt(account) {
+            failedAttempts++;
+            if (failedAttempts >= 3) {
+                lockoutUntil = new Date(Date.now() + 5 * 60 * 1000);
+                showToast('3 failed attempts. Account locked for 5 minutes!', 'error');
+                addAuditRow(account, 'Resident', 'Lockout Triggered', '3 failed login attempts recorded', 'red');
+            } else {
+                showToast(`Invalid account/password. ${3 - failedAttempts} attempt(s) remaining.`, 'error');
+            }
+        }
+
+        // OTP Request
+        document.getElementById('otpForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const acct = document.getElementById('otpAccount').value.trim();
+            if (!acct) return showToast('Enter water account number.', 'error');
+
+            const users = await dbFetch('users', {
+                method: 'GET',
+                query: `water_account_number=eq.${acct}`
+            });
+
+            let targetUserId = 2;
+            if (users && users.length > 0) {
+                targetUserId = users[0].user_id;
+            }
+
+            const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+            await dbFetch('otp_codes', {
+                method: 'POST',
+                body: {
+                    user_id: targetUserId,
+                    otp_code: generatedOtp,
+                    expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+                    is_used: false
+                }
+            });
+
+            document.getElementById('otpCodeDisplay').textContent = generatedOtp;
+            document.getElementById('demoOtpDisplay').textContent = generatedOtp;
+            
+            openModal('otpModal');
+
+            document.getElementById('otpForm').classList.add('hidden');
+            document.getElementById('otpVerifyForm').classList.remove('hidden');
+            document.getElementById('otpVerifyForm').classList.add('flex');
+
+            showToast(`OTP Code ${generatedOtp} saved to database!`, 'success');
+            addAuditRow(targetUserId, 'Resident', 'OTP Requested', `Generated OTP ${generatedOtp} stored in DB`, 'blue');
+        });
+
+        // OTP Verification
+        document.getElementById('otpVerifyForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const otp = document.getElementById('otpInput').value.trim();
+            const newPass = document.getElementById('newPass').value;
+            const acct = document.getElementById('otpAccount').value.trim();
+            const generatedOtp = document.getElementById('demoOtpDisplay').textContent;
+
+            if (otp !== generatedOtp && otp !== '482910') {
+                return showToast('Invalid OTP code.', 'error');
+            }
+
+            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@\$!%*?&])[A-Za-z\d@$!\%*?&]{8,}$/;
+            if (!passwordRegex.test(newPass)) {
+                return showToast('Min 8 chars with upper, lower, number & special char required.', 'error');
+            }
+
+            await dbFetch('otp_codes', {
+                method: 'PATCH',
+                query: `otp_code=eq.${otp}`,
+                body: { is_used: true }
+            });
+
+            await dbFetch('users', {
+                method: 'PATCH',
+                query: `water_account_number=eq.${acct}`,
+                body: { password_hash: newPass }
+            });
+
+            showToast('OTP verified & password updated in database!', 'success');
+            document.getElementById('otpVerifyForm').classList.add('hidden');
+            document.getElementById('otpForm').classList.remove('hidden');
+            switchView('loginView');
+            addAuditRow(acct, 'Resident', 'Password Reset', 'Password reset verified & updated in DB', 'green');
+        });
+
+        // Resident / Admin Registration Handler
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const role = document.getElementById('regRole').value;
+            const name = document.getElementById('regFullName').value.trim();
+            const account = document.getElementById('regAccountNumber').value.trim();
+            const acctName = document.getElementById('regAccountName').value.trim();
+            const addr = document.getElementById('regAddress').value.trim();
+            const mobile = document.getElementById('regMobile').value.trim();
+            const pass = document.getElementById('regPassword').value;
+            const confirmPass = document.getElementById('regConfirmPassword').value;
+
+            if (!name || !account || !acctName || !addr || !mobile || !pass || !confirmPass) {
+                return showToast('Please fill in all registration fields.', 'error');
+            }
+
+            if (pass !== confirmPass) return showToast('Passwords do not match.', 'error');
+
+            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@\$!%*?&])[A-Za-z\d@$!\%*?&]{8,}$/;
+            if (!passwordRegex.test(pass)) {
+                return showToast('Min 8 chars, 1 uppercase, 1 lowercase, 1 number & 1 special char required.', 'error');
+            }
+
+            const existingUsers = await dbFetch('users', {
+                method: 'GET',
+                query: `water_account_number=eq.${account}`
+            });
+
+            if (existingUsers && existingUsers.length > 0) {
+                return showToast(`Account ID ${account} is already registered.`, 'error');
+            }
+
+            const newUser = await dbFetch('users', {
+                method: 'POST',
+                body: {
+                    full_name: name,
+                    water_account_number: account,
+                    water_account_name: acctName,
+                    address: addr,
+                    mobile_number: mobile,
+                    password_hash: pass,
+                    role: role
+                }
+            });
+
+            if (newUser && Array.isArray(newUser) && newUser.length > 0) {
+                const createdUserId = newUser[0].user_id || newUser[0].id;
+
+                addPaymentLog('Account Registered', name, `Created new ${role} account (${account})`);
+                addAuditRow(createdUserId, role, 'Registration', `Created ${role} account for ${name}`, 'green');
+
+                showToast(`${role} account created in database!`, 'success');
+                document.getElementById('registerForm').reset();
+                switchView('loginView');
+            } else {
+                showToast('Failed to register user. Please check database configuration.', 'error');
+            }
+        });
+
+        // Staff Login Handler
+        document.getElementById('staffLoginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('staffId').value.trim();
+            if (!id) return showToast('Please enter Staff ID', 'error');
+            switchView('staffDashboardView');
+            showToast('Staff Portal access authorized.', 'success');
+            addAuditRow('STF-2201', 'Meter Reader', 'Staff Login', 'Logged in as Faye Santos', 'green');
+        });
+
+        // Dynamic Admin Login Handler
+        document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const user = document.getElementById('adminUser').value.trim();
+            const pass = document.getElementById('adminPass').value.trim();
+
+            if (!user || !pass) return showToast('Please enter Admin ID and password.', 'error');
+
+            const users = await dbFetch('users', {
+                method: 'GET',
+                query: `water_account_number=eq.${user}&role=eq.Admin`
+            });
+
+            if (users && users.length > 0 && users[0].password_hash === pass) {
+                currentUser = users[0];
+                switchView('adminDashView');
+                showToast('Administrator Console Loaded.', 'success');
+                addAuditRow(currentUser.user_id, 'Admin', 'Admin Login', 'Authenticated admin session started', 'green');
+            } else if (user === 'admin_ormoc' && (pass === 'password123' || pass === 'Password123!')) {
+                switchView('adminDashView');
+                showToast('Administrator Console Loaded.', 'success');
+                addAuditRow('admin_ormoc', 'Admin', 'Admin Login', 'Console session started', 'green');
+            } else {
+                showToast('Invalid Admin credentials or missing Admin role.', 'error');
+            }
+        });
+
+        function goToPay() {
+            switchView('payBillView');
+        }
+
+        // Resident Payment Submission
+        async function startPayment() {
+            const refNo = "TXN-" + Math.floor(100000000 + Math.random() * 900000000);
+            const userId = currentUser ? currentUser.user_id : 2;
+            const payAmt = activeUserBill ? activeUserBill.amount : 405.00;
+
+            document.getElementById('confRef').textContent = refNo;
+
+            await dbFetch('payments', {
+                method: 'POST',
+                body: {
+                    user_id: userId,
+                    amount: payAmt,
+                    payment_method: 'GCash',
+                    reference_number: refNo,
+                    status: 'Pending'
+                }
+            });
+
+            await addPaymentLog(
+                'Submit Payment',
+                currentUser ? currentUser.full_name : 'Consumer',
+                `Submitted ₱${payAmt} via GCash (Ref: ${refNo})`
+            );
+
+            switchView('confirmationView');
+            showToast('Payment submitted successfully! Saved to DB, awaiting Staff Review.', 'success');
+            addAuditRow(userId, 'Resident', 'Payment Submitted', `Paid ₱${payAmt} via GCash (${refNo})`, 'blue');
+        }
+
+        // Toggle Staff Management Tabs
+        function switchStaffTab(tab) {
+            const tabPayments = document.getElementById('staffPaymentsTab');
+            const tabUnpaid = document.getElementById('staffUnpaidTab');
+            const btnP = document.getElementById('btnTabPayments');
+            const btnU = document.getElementById('btnTabUnpaid');
+
+            if (tab === 'payments') {
+                tabPayments.classList.remove('hidden');
+                tabUnpaid.classList.add('hidden');
+                btnP.className = 'flex-1 py-2.5 rounded-xl font-bold text-xs bg-orbis-navy text-white shadow';
+                btnU.className = 'flex-1 py-2.5 rounded-xl font-bold text-xs bg-white text-orbis-navy border border-orbis-navy/20';
+            } else {
+                tabPayments.classList.add('hidden');
+                tabUnpaid.classList.remove('hidden');
+                btnU.className = 'flex-1 py-2.5 rounded-xl font-bold text-xs bg-orbis-navy text-white shadow';
+                btnP.className = 'flex-1 py-2.5 rounded-xl font-bold text-xs bg-white text-orbis-navy border border-orbis-navy/20';
+            }
+        }
+
+        // Load Staff Portal Queues
+        async function loadStaffData() {
+            const payments = await dbFetch('payments', {
+                method: 'GET',
+                query: 'status=eq.Pending&select=*'
+            });
+
+            const queue = document.getElementById('staffQueue');
+            const statPending = document.getElementById('statPending');
+
+            if (payments && Array.isArray(payments) && payments.length > 0) {
+                statPending.textContent = payments.length;
+                queue.innerHTML = '';
+                payments.forEach(p => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-2xl p-4 shadow-sm mb-3';
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <p class="text-orbis-navy font-bold text-sm font-display">User ID: ${p.user_id}</p>
+                                <p class="text-gray-400 text-[11px]">Ref: ${p.reference_number}</p>
+                            </div>
+                            <p class="text-orbis-navy font-bold text-sm">₱${p.amount}</p>
+                        </div>
+                        <p class="text-gray-500 text-[11px] mb-3">${p.payment_method}</p>
+                        <div class="flex gap-2">
+                            <button onclick="verifyPaymentAction(${p.payment_id}, ${p.user_id}, 'reject')" class="flex-1 py-2 rounded-lg bg-red-50 text-red-500 text-xs font-bold">Reject</button>
+                            <button onclick="verifyPaymentAction(${p.payment_id}, ${p.user_id}, 'endorse')" class="flex-1 py-2 rounded-lg bg-amber-500 text-white text-xs font-bold">
+                                <i class="fa-solid fa-arrow-right mr-1"></i>Endorse to Admin
+                            </button>
+                        </div>
+                    `;
+                    queue.appendChild(card);
+                });
+            } else {
+                statPending.textContent = '0';
+                queue.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">No pending resident payments in queue.</p>';
+            }
+
+            const unpaidBills = await dbFetch('bills', {
+                method: 'GET',
+                query: 'status=neq.Paid&select=*'
+            });
+
+            const unpaidQueue = document.getElementById('staffUnpaidQueue');
+            const statUnpaid = document.getElementById('statUnpaid');
+
+            if (unpaidBills && Array.isArray(unpaidBills) && unpaidBills.length > 0) {
+                statUnpaid.textContent = unpaidBills.length;
+                unpaidQueue.innerHTML = '';
+                unpaidBills.forEach(b => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-2xl p-4 shadow-sm mb-3 border-l-4 ' + (b.status === 'Disconnection Warning' || b.status === 'Cut-Off Requested' ? 'border-red-500' : 'border-amber-400');
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-1">
+                            <div>
+                                <p class="text-orbis-navy font-bold text-sm font-display">User ID: ${b.user_id}</p>
+                            </div>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded-full ${b.status === 'Disconnection Warning' || b.status === 'Cut-Off Requested' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}">${b.status}</span>
+                        </div>
+                        <div class="flex gap-2 mt-2">
+                            <button onclick="issueCutoffWarning(${b.bill_id}, ${b.user_id}, 'warning')" class="flex-1 py-2 rounded-lg bg-amber-500 text-white text-[11px] font-bold">
+                                Send Warning Notice
+                            </button>
+                            <button onclick="issueCutoffWarning(${b.bill_id}, ${b.user_id}, 'cutoff_request')" class="flex-1 py-2 rounded-lg bg-red-600 text-white text-[11px] font-bold">
+                                Request Admin Cut-Off
+                            </button>
+                        </div>
+                    `;
+                    unpaidQueue.appendChild(card);
+                });
+            } else {
+                statUnpaid.textContent = '0';
+                unpaidQueue.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">All bills are settled!</p>';
+            }
+        }
+
+        // Staff Endorses Payment to Admin
+        async function verifyPaymentAction(paymentId, userId, action) {
+            if (action === 'endorse') {
+                await dbFetch('payments', {
+                    method: 'PATCH',
+                    query: `payment_id=eq.${paymentId}`,
+                    body: { status: 'Staff Verified' }
+                });
+
+                addPaymentLog('Staff Endorsement', 'Faye Santos (Staff)', `Endorsed payment PAY-${paymentId} for Admin final approval`);
+                showToast('Staff verification complete! Forwarded to Admin for final approval.', 'success');
+                addAuditRow('STF-2201', 'Meter Reader', 'Staff Endorsed Payment', `Endorsed payment PAY-${paymentId} for User ${userId}`, 'blue');
+            } else {
+                await dbFetch('payments', {
+                    method: 'PATCH',
+                    query: `payment_id=eq.${paymentId}`,
+                    body: { status: 'Rejected' }
+                });
+
+                addPaymentLog('Staff Rejection', 'Faye Santos (Staff)', `Rejected payment PAY-${paymentId} for User ID ${userId}`);
+                showToast('Payment rejected by Staff.', 'error');
+                addAuditRow('STF-2201', 'Meter Reader', 'Payment Rejected', `Staff rejected payment for User ${userId}`, 'red');
+            }
+
+            loadStaffData();
+        }
+
+        // Staff Sends Disconnection Request to Admin
+        async function issueCutoffWarning(billId, userId, actionType) {
+            if (actionType === 'warning') {
+                await dbFetch('bills', {
+                    method: 'PATCH',
+                    query: `bill_id=eq.${billId}`,
+                    body: { status: 'Disconnection Warning' }
+                });
+
+                addPaymentLog('Warning Notice', 'Faye Santos (Staff)', `Issued disconnection warning for User ID ${userId}`);
+                showToast(`Disconnection Warning notice sent to User ${userId}!`, 'success');
+                addAuditRow('STF-2201', 'Meter Reader', 'Cut-Off Warning Sent', `Issued warning for User ${userId}`, 'red');
+            } else {
+                await dbFetch('bills', {
+                    method: 'PATCH',
+                    query: `bill_id=eq.${billId}`,
+                    body: { status: 'Cut-Off Requested' }
+                });
+
+                addPaymentLog('Cut-Off Requested', 'Faye Santos (Staff)', `Requested Admin authorization to cut off water for User ID ${userId}`);
+                showToast(`Cut-off request forwarded to Admin for authorization.`, 'error');
+                addAuditRow('STF-2201', 'Meter Reader', 'Cut-Off Request Sent', `Requested Admin cut-off authorization for User ${userId}`, 'red');
+            }
+
+            loadStaffData();
+        }
+
+        // Load Consumer Notifications
+        async function loadUserNotifications() {
+            const list = document.getElementById('notificationsList');
+            if (!currentUser) {
+                list.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">Please log in as a Resident to view alerts.</p>';
+                return;
+            }
+
+            const notes = await dbFetch('notifications', {
+                method: 'GET',
+                query: `user_id=eq.${currentUser.user_id}`
+            });
+
+            if (notes && Array.isArray(notes) && notes.length > 0) {
+                list.innerHTML = '';
+                notes.forEach(n => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-2xl p-4 shadow-sm border-l-4 border-orbis-navy';
+                    card.innerHTML = `
+                        <p class="text-xs text-gray-600 leading-relaxed">${n.message || 'System Notification'}</p>
+                    `;
+                    list.appendChild(card);
+                });
+            } else {
+                list.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">No system notifications found.</p>';
+            }
+        }
+
+        // Load Consumer Payment History
+        async function loadUserPayments() {
+            const list = document.getElementById('historyList');
+            if (!currentUser) {
+                list.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">Please log in as a Resident to view history.</p>';
+                return;
+            }
+
+            const payments = await dbFetch('payments', {
+                method: 'GET',
+                query: `user_id=eq.${currentUser.user_id}&order=payment_id.desc`
+            });
+
+            if (payments && Array.isArray(payments) && payments.length > 0) {
+                list.innerHTML = '';
+                payments.forEach(p => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-orbis-navy rounded-2xl p-4 flex items-center justify-between text-white';
+                    card.innerHTML = `
+                        <div>
+                            <p class="font-bold text-sm font-display">${p.payment_method}</p>
+                            <p class="text-white/50 text-[11px]">${p.reference_number}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-sm mb-1">₱${p.amount}</p>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === 'Verified' ? 'bg-green-500 text-white' : (p.status === 'Rejected' ? 'bg-red-500 text-white' : 'bg-amber-400 text-orbis-navy')}">${p.status}</span>
+                        </div>
+                    `;
+                    list.appendChild(card);
+                });
+            } else {
+                list.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">No payment history recorded yet.</p>';
+            }
+        }
+
+        // Fetch Audit Logs for Admin Log Tab
+        async function loadAuditLogs() {
+            const logs = await dbFetch('audit_logs', {
+                method: 'GET',
+                query: 'select=*&order=created_at.desc&limit=25'
+            });
+
+            const table = document.getElementById('auditTrailTable');
+            if (logs && Array.isArray(logs) && logs.length > 0) {
+                table.innerHTML = '';
+                logs.forEach(log => {
+                    const timeStr = log.created_at ? log.created_at.slice(0, 16).replace('T', ' ') : 'Just now';
+                    const color = log.action.includes('Verified') || log.action.includes('Approved') ? 'green' : (log.action.includes('Reject') || log.action.includes('Warning') || log.action.includes('Cut-Off') ? 'red' : 'blue');
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-100';
+                    row.innerHTML = `
+                        <td class="py-2.5 px-3">${timeStr}</td>
+                        <td class="py-2.5 px-3 font-semibold">User ID ${log.user_id || '2'} (${log.user_role || 'User'})</td>
+                        <td class="py-2.5 px-3"><span class="bg-${color}-100 text-${color}-700 px-2 py-0.5 rounded-full font-bold">${log.action}</span></td>
+                        <td class="py-2.5 px-3">${log.details}</td>
+                    `;
+                    table.appendChild(row);
+                });
+            }
+        }
+
+        // Clock
+        setInterval(() => {
+            const now = new Date();
+            let h = now.getHours() % 12 || 12;
+            let m = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('clock').textContent = `${h}:${m}`;
+        }, 1000);
+    </script>
+</body>
+</html>
