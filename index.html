@@ -1097,26 +1097,27 @@
                         </div>
 
                         <!-- TAB 2: User Accounts Directory -->
-                        <div id="adminTabUsers" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
-                            <h3 class="text-sm font-bold text-orbis-navy font-display mb-4">Registered System Users (`users` Table)</h3>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse text-xs">
-                                    <thead>
-                                        <tr class="border-b border-gray-200 text-gray-400">
-                                            <th class="py-2 px-3">ID</th>
-                                            <th class="py-2 px-3">Full Name</th>
-                                            <th class="py-2 px-3">Account Number / ID</th>
-                                            <th class="py-2 px-3">Role</th>
-                                            <th class="py-2 px-3">Address</th>
-                                            <th class="py-2 px-3">Mobile</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="adminUsersTable">
-                                        <tr><td colspan="6" class="text-center py-6 text-gray-400">Loading user directory...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+<div id="adminTabUsers" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
+    <h3 class="text-sm font-bold text-orbis-navy font-display mb-4">Registered System Users (`users` Table)</h3>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+            <thead>
+                <tr class="border-b border-gray-200 text-gray-400">
+                    <th class="py-2 px-3">ID</th>
+                    <th class="py-2 px-3">Full Name</th>
+                    <th class="py-2 px-3">Account Number / ID</th>
+                    <th class="py-2 px-3">Role</th>
+                    <th class="py-2 px-3">Address</th>
+                    <th class="py-2 px-3">Mobile</th>
+                    <th class="py-2 px-3 text-right">Action</th>
+                </tr>
+            </thead>
+            <tbody id="adminUsersTable">
+                <tr><td colspan="7" class="text-center py-6 text-gray-400">Loading user directory...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
 
                         <!-- TAB 3: Live System Audit Logs -->
                         <div id="adminTabLogs" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
@@ -1640,26 +1641,32 @@
             });
             const usersTable = document.getElementById('adminUsersTable');
             if (allUsers && Array.isArray(allUsers) && allUsers.length > 0) {
-                document.getElementById('admStatUsers').textContent = allUsers.length;
-                usersTable.innerHTML = '';
-                allUsers.forEach(u => {
-                    const row = document.createElement('tr');
-                    row.className = 'border-b border-gray-100';
-                    row.innerHTML = `
-                        <td class="py-2.5 px-3 font-bold">${u.user_id}</td>
-                        <td class="py-2.5 px-3 font-semibold text-orbis-navy">${u.full_name}</td>
-                        <td class="py-2.5 px-3 font-mono">${u.water_account_number}</td>
-                        <td class="py-2.5 px-3">
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${u.role === 'Admin' ? 'bg-purple-100 text-purple-700' : (u.role === 'MeterReader' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700')}">
-                                ${u.role || 'Consumer'}
-                            </span>
-                        </td>
-                        <td class="py-2.5 px-3 text-gray-500">${u.address || 'Ormoc City'}</td>
-                        <td class="py-2.5 px-3 text-gray-500">${u.mobile_number || 'N/A'}</td>
-                    `;
-                    usersTable.appendChild(row);
-                });
-            }
+    document.getElementById('admStatUsers').textContent = allUsers.length;
+    usersTable.innerHTML = '';
+    allUsers.forEach(u => {
+        const safeName = (u.full_name || '').replace(/'/g, "\\'");
+        const row = document.createElement('tr');
+        row.className = 'border-b border-gray-100 hover:bg-gray-50/50 transition-colors';
+        row.innerHTML = `
+            <td class="py-2.5 px-3 font-bold">${u.user_id}</td>
+            <td class="py-2.5 px-3 font-semibold text-orbis-navy">${u.full_name}</td>
+            <td class="py-2.5 px-3 font-mono">${u.water_account_number}</td>
+            <td class="py-2.5 px-3">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${u.role === 'Admin' ? 'bg-purple-100 text-purple-700' : (u.role === 'MeterReader' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700')}">
+                    ${u.role || 'Consumer'}
+                </span>
+            </td>
+            <td class="py-2.5 px-3 text-gray-500">${u.address || 'Ormoc City'}</td>
+            <td class="py-2.5 px-3 text-gray-500">${u.mobile_number || 'N/A'}</td>
+            <td class="py-2.5 px-3 text-right">
+                <button onclick="deleteUserByAdmin(${u.user_id}, '${safeName}')" class="bg-red-100 hover:bg-red-200 text-red-600 font-bold px-2.5 py-1 rounded-lg text-xs transition-colors">
+                    <i class="fa-solid fa-trash-can mr-1"></i>Delete
+                </button>
+            </td>
+        `;
+        usersTable.appendChild(row);
+    });
+}
 
             const billsTable = document.getElementById('adminPendingBillsTable');
             const billBadge = document.getElementById('approvalBillBadgeCount');
@@ -2012,16 +2019,27 @@
             }
         });
 
-        function handleFailedAttempt(account) {
-            failedAttempts++;
-            if (failedAttempts >= 3) {
-                lockoutUntil = new Date(Date.now() + 5 * 60 * 1000);
-                showToast('3 failed attempts. Account locked for 5 minutes!', 'error');
-                addAuditRow(account, 'Resident', 'Lockout Triggered', '3 failed login attempts recorded', 'red');
-            } else {
-                showToast(`Invalid account/password. ${3 - failedAttempts} attempt(s) remaining.`, 'error');
-            }
-        }
+        function checkLockout() {
+    if (lockoutUntil && new Date() < lockoutUntil) {
+        const secs = Math.ceil((lockoutUntil - new Date()) / 1000);
+        showToast(`Account locked due to multiple failed attempts. Retry in ${secs}s.`, 'error');
+        return true;
+    }
+    return false;
+}
+
+function handleFailedAttempt(account, roleLabel = 'User') {
+    failedAttempts++;
+    if (failedAttempts >= 3) {
+        lockoutUntil = new Date(Date.now() + 5 * 60 * 1000); // 5 minute lockout
+        showToast('3 failed attempts. Account locked for 5 minutes!', 'error');
+        addAuditRow(account, roleLabel, 'Lockout Triggered', `3 failed login attempts recorded for ${account}`, 'red');
+    } else {
+        const remaining = 3 - failedAttempts;
+        showToast(`Invalid credentials. ${remaining} attempt(s) remaining before lockout.`, 'error');
+        addAuditRow(account, roleLabel, 'Failed Login Attempt', `Failed login attempt (${failedAttempts}/3) for ${account}`, 'red');
+    }
+}
 
         document.getElementById('otpForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -2183,69 +2201,83 @@
         });
 
         document.getElementById('staffLoginForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const id = document.getElementById('staffId').value.trim();
-            const pass = document.getElementById('staffPassword').value.trim();
+    e.preventDefault();
 
-            if (!id || !pass) return showToast('Please enter Staff ID and password.', 'error');
+    // Check if account is currently locked out
+    if (checkLockout()) return;
 
-            const users = await dbFetch('users', {
-                method: 'GET',
-                query: `water_account_number=eq.${encodeURIComponent(id)}&role=eq.MeterReader`
-            });
+    const id = document.getElementById('staffId').value.trim();
+    const pass = document.getElementById('staffPassword').value.trim();
 
-            if (users && users.length > 0) {
-                const staffUser = users[0];
-                if (staffUser.password_hash !== pass) {
-                    return showToast('Invalid Staff ID or Password.', 'error');
-                }
+    if (!id || !pass) return showToast('Please enter Staff ID and password.', 'error');
 
-                currentUser = staffUser;
-                document.getElementById('sName').textContent = currentUser.full_name;
-                const initials = currentUser.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-                document.getElementById('sAvatar').textContent = initials || 'ST';
+    const users = await dbFetch('users', {
+        method: 'GET',
+        query: `water_account_number=eq.${encodeURIComponent(id)}&role=eq.MeterReader`
+    });
 
-                switchView('staffCustomersView');
-                showToast(`Welcome, ${currentUser.full_name}!`, 'success');
-                addAuditRow(currentUser.user_id, 'Meter Reader', 'Staff Login', `Logged in as ${currentUser.full_name}`, 'green');
-            } else if (id === 'STF-2201' && (pass === 'Password123!' || pass === 'password123')) {
-                currentUser = { user_id: 'STF-2201', full_name: 'Faye Santos', role: 'MeterReader' };
-                document.getElementById('sName').textContent = 'Faye Santos';
-                document.getElementById('sAvatar').textContent = 'FS';
+    if (users && users.length > 0) {
+        const staffUser = users[0];
+        if (staffUser.password_hash !== pass) {
+            return handleFailedAttempt(id, 'Meter Reader');
+        }
 
-                switchView('staffCustomersView');
-                showToast('Staff Portal access authorized.', 'success');
-                addAuditRow('STF-2201', 'Meter Reader', 'Staff Login', 'Logged in as Faye Santos', 'green');
-            } else {
-                showToast('Invalid Staff ID or Password.', 'error');
-            }
-        });
+        // Reset counter on successful login
+        failedAttempts = 0;
+        currentUser = staffUser;
+        document.getElementById('sName').textContent = currentUser.full_name;
+        const initials = currentUser.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        document.getElementById('sAvatar').textContent = initials || 'ST';
 
+        switchView('staffCustomersView');
+        showToast(`Welcome, ${currentUser.full_name}!`, 'success');
+        addAuditRow(currentUser.user_id, 'Meter Reader', 'Staff Login', `Logged in as ${currentUser.full_name}`, 'green');
+    } else if (id === 'STF-2201' && (pass === 'Password123!' || pass === 'password123')) {
+        // Reset counter on successful demo login
+        failedAttempts = 0;
+        currentUser = { user_id: 'STF-2201', full_name: 'Faye Santos', role: 'MeterReader' };
+        document.getElementById('sName').textContent = 'Faye Santos';
+        document.getElementById('sAvatar').textContent = 'FS';
+
+        switchView('staffCustomersView');
+        showToast('Staff Portal access authorized.', 'success');
+        addAuditRow('STF-2201', 'Meter Reader', 'Staff Login', 'Logged in as Faye Santos', 'green');
+    } else {
+        handleFailedAttempt(id, 'Meter Reader');
+    }
+});
         document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const user = document.getElementById('adminUser').value.trim();
-            const pass = document.getElementById('adminPass').value.trim();
+    e.preventDefault();
 
-            if (!user || !pass) return showToast('Please enter Admin ID and password.', 'error');
+    // Check if account is currently locked out
+    if (checkLockout()) return;
 
-            const users = await dbFetch('users', {
-                method: 'GET',
-                query: `water_account_number=eq.${encodeURIComponent(user)}&role=eq.Admin`
-            });
+    const user = document.getElementById('adminUser').value.trim();
+    const pass = document.getElementById('adminPass').value.trim();
 
-            if (users && users.length > 0 && users[0].password_hash === pass) {
-                currentUser = users[0];
-                switchView('adminDashView');
-                showToast('Administrator Console Loaded.', 'success');
-                addAuditRow(currentUser.user_id, 'Admin', 'Admin Login', 'Authenticated admin session started', 'green');
-            } else if (user === 'admin_ormoc' && (pass === 'password123' || pass === 'Password123!')) {
-                switchView('adminDashView');
-                showToast('Administrator Console Loaded.', 'success');
-                addAuditRow('admin_ormoc', 'Admin', 'Admin Login', 'Console session started', 'green');
-            } else {
-                showToast('Invalid Admin credentials or missing Admin role.', 'error');
-            }
-        });
+    if (!user || !pass) return showToast('Please enter Admin ID and password.', 'error');
+
+    const users = await dbFetch('users', {
+        method: 'GET',
+        query: `water_account_number=eq.${encodeURIComponent(user)}&role=eq.Admin`
+    });
+
+    if (users && users.length > 0 && users[0].password_hash === pass) {
+        failedAttempts = 0; // Reset counter on success
+        currentUser = users[0];
+        switchView('adminDashView');
+        showToast('Administrator Console Loaded.', 'success');
+        addAuditRow(currentUser.user_id, 'Admin', 'Admin Login', 'Authenticated admin session started', 'green');
+    } else if (user === 'admin_ormoc' && (pass === 'password123' || pass === 'Password123!')) {
+        failedAttempts = 0; // Reset counter on success
+        currentUser = { user_id: 'admin_ormoc', full_name: 'System Admin', role: 'Admin' };
+        switchView('adminDashView');
+        showToast('Administrator Console Loaded.', 'success');
+        addAuditRow('admin_ormoc', 'Admin', 'Admin Login', 'Console session started', 'green');
+    } else {
+        handleFailedAttempt(user, 'Admin');
+    }
+});
 
         function goToPay() {
             switchView('payBillView');
@@ -2298,6 +2330,25 @@
                 btnP.className = 'flex-1 py-2.5 rounded-xl font-bold text-xs bg-white text-orbis-navy border border-orbis-navy/20';
             }
         }
+        async function deleteUserByAdmin(userId, userName) {
+    if (!confirm(`Are you sure you want to permanently delete user "${userName}" (ID: ${userId}) from the database?`)) {
+        return;
+    }
+
+    // Send HTTP DELETE request to Supabase REST API
+    const response = await dbFetch('users', {
+        method: 'DELETE',
+        query: `user_id=eq.${userId}`
+    });
+
+    if (response !== null) {
+        addAuditRow('admin_ormoc', 'Admin', 'User Deleted', `Deleted User ID ${userId} (${userName}) from users table`, 'red');
+        showToast(`User "${userName}" successfully deleted from database.`, 'success');
+        loadAdminData();
+    } else {
+        showToast(`Failed to delete user ID ${userId}. Check foreign key constraints or Supabase policies.`, 'error');
+    }
+}
 
         async function loadStaffData() {
             const payments = await dbFetch('payments', {
