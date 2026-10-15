@@ -181,10 +181,10 @@
         .nav-underline { display:none; width:18px; height:3px; border-radius:2px; background:#212D4B; margin-top:1px; }
         .nav-item.active .nav-underline { display:block; }
 
-        .staff-nav { background-color: #212D4B; border-top: none; }
+        .staff-nav { background-color: #EAEDF4; border-top: 1px solid rgba(33,45,75,0.1); }
         .staff-nav .nav-item { color: #7C88A6; }
-        .staff-nav .nav-item.active { color: #fff; }
-        .staff-nav .nav-underline { background: #fff; }
+        .staff-nav .nav-item.active { color: #212D4B; }
+        .staff-nav .nav-underline { background: #212D4B; }
 
         .admin-nav-item {
             display: flex; align-items: center; gap: 12px; width: 100%;
@@ -250,6 +250,50 @@
             </div>
         </div>
 
+        <!-- STAFF: Create New Bill / Advance Payment Modal (Step 1) -->
+        <div id="createBillModal" class="modal-overlay">
+            <div class="bg-white p-6 rounded-3xl w-[90%] max-w-md shadow-2xl">
+                <div class="flex justify-between items-center mb-4 border-b pb-3">
+                    <h3 class="text-lg font-bold text-orbis-navy font-display"><i class="fa-solid fa-file-circle-plus text-blue-600 mr-2"></i>Create New Bill / Advance Payment</h3>
+                    <button onclick="closeModal('createBillModal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                <form id="createBillForm" class="flex flex-col gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-orbis-navy/70 uppercase mb-1 ml-1">Resident Water Account</label>
+                        <select id="billAccountNum" required class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy bg-white text-orbis-navy font-semibold">
+                            <option value="">Loading registered accounts...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-orbis-navy/70 uppercase mb-1 ml-1">Billing Period / Description</label>
+                        <input type="text" id="billPeriod" required class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="e.g. Nov 2026 (Advance Payment)" value="Nov 2026 (Advance Payment)">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-bold text-orbis-navy/70 uppercase mb-1 ml-1">Prev. Reading</label>
+                            <input type="number" id="billPrevReading" required class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" value="2140">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-orbis-navy/70 uppercase mb-1 ml-1">Pres. Reading</label>
+                            <input type="number" id="billPresReading" required class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" value="2162">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-orbis-navy/70 uppercase mb-1 ml-1">Bill Amount (₱)</label>
+                        <input type="number" step="0.01" id="billAmount" required class="w-full px-3.5 py-2.5 border rounded-xl text-sm font-bold text-orbis-navy focus:ring-2 focus:ring-orbis-navy" value="450.00">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-orbis-navy/70 uppercase mb-1 ml-1">Due Date</label>
+                        <input type="date" id="billDueDate" required class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" value="2026-11-15">
+                    </div>
+                    <div class="flex gap-2 mt-2">
+                        <button type="button" onclick="closeModal('createBillModal')" class="flex-1 py-3 rounded-xl font-semibold bg-gray-100 text-orbis-navy">Cancel</button>
+                        <button type="submit" class="flex-1 py-3 rounded-xl font-semibold bg-orbis-navy text-white shadow-md">Submit to Admin</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div class="view-container" id="mainContainer">
 
             <!-- ROLE SELECT VIEW -->
@@ -265,7 +309,6 @@
                 <p class="text-center text-orbis-light/80 text-[11px] font-bold uppercase tracking-wider mb-4">Continue As</p>
 
                 <div class="flex flex-col gap-3.5">
-                    <!-- Resident Button -->
                     <button onclick="switchView('loginView')" class="w-full bg-orbis-light text-orbis-navy p-3.5 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center gap-3.5 group text-left">
                         <div class="w-11 h-11 rounded-xl bg-orbis-navy/10 flex items-center justify-center text-orbis-navy text-lg flex-shrink-0 group-hover:bg-orbis-navy group-hover:text-white transition-colors">
                             <i class="fa-solid fa-house-user"></i>
@@ -277,19 +320,17 @@
                         <i class="fa-solid fa-chevron-right text-xs text-orbis-navy/40 pr-1"></i>
                     </button>
 
-                    <!-- Staff Button -->
                     <button onclick="switchView('staffLoginView')" class="w-full bg-orbis-light text-orbis-navy p-3.5 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center gap-3.5 group text-left">
                         <div class="w-11 h-11 rounded-xl bg-orbis-navy/10 flex items-center justify-center text-orbis-navy text-lg flex-shrink-0 group-hover:bg-orbis-navy group-hover:text-white transition-colors">
                             <i class="fa-solid fa-id-badge"></i>
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="font-bold text-sm leading-snug">Staff / Meter Reader</div>
-                            <div class="text-[11px] text-orbis-navy/70 font-medium">Staff Review & Verification</div>
+                            <div class="text-[11px] text-orbis-navy/70 font-medium">Customer Directory & Billing</div>
                         </div>
                         <i class="fa-solid fa-chevron-right text-xs text-orbis-navy/40 pr-1"></i>
                     </button>
 
-                    <!-- Admin Button -->
                     <button onclick="switchView('adminLoginView')" class="w-full bg-orbis-light text-orbis-navy p-3.5 rounded-2xl shadow-lg active:scale-95 transition-all flex items-center gap-3.5 group text-left">
                         <div class="w-11 h-11 rounded-xl bg-orbis-navy/10 flex items-center justify-center text-orbis-navy text-lg flex-shrink-0 group-hover:bg-orbis-navy group-hover:text-white transition-colors">
                             <i class="fa-solid fa-user-shield"></i>
@@ -319,7 +360,7 @@
 
                 <div class="mb-5 bg-white/10 p-3 rounded-2xl">
                     <p class="text-[10px] text-orbis-light font-bold uppercase text-center mb-2">Supabase Registered Accounts</p>
-                    <div class="grid grid-cols-2 gap-1.5 text-[11px]" id="quickSelectAccounts">
+                    <div class="grid grid-cols-2 gap-1.5 text-[11px]">
                         <button type="button" onclick="fillDemo('12554368', 'Password123!')" class="bg-white/15 hover:bg-white/25 text-white py-1.5 px-2 rounded-lg text-left truncate">
                             <i class="fa-solid fa-user mr-1 text-[10px]"></i>Rico Ramos
                         </button>
@@ -511,6 +552,90 @@
                 </div>
             </div>
 
+            <!-- STAFF: CUSTOMERS LIST VIEW -->
+            <div id="staffCustomersView" class="view bg-orbis-off min-h-full pb-24">
+                <div class="bg-orbis-navy text-white pt-10 pb-4 px-5 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold font-display tracking-wide">Customers</h2>
+                        <p class="text-[10px] text-orbis-light/70">Staff Directory & Billing Queue</p>
+                    </div>
+                    <button onclick="openModal('createBillModal')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 shadow">
+                        <i class="fa-solid fa-plus-circle"></i> New Bill / Advance
+                    </button>
+                </div>
+
+                <div class="px-4 pt-3 pb-2 bg-orbis-off">
+                    <div class="bg-white rounded-2xl px-3.5 py-2.5 flex items-center gap-2 shadow-sm border border-gray-200">
+                        <i class="fa-solid fa-magnifying-glass text-gray-400 text-xs"></i>
+                        <input type="text" id="customerSearchInput" onkeyup="filterCustomers()" class="w-full text-xs text-orbis-navy focus:outline-none" placeholder="Search name or account no.">
+                    </div>
+
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="setCustomerFilter('All')" id="filterBtnAll" class="px-3 py-1 rounded-full text-xs font-bold bg-orbis-navy text-white">All</button>
+                        <button onclick="setCustomerFilter('Active')" id="filterBtnActive" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-600">Active</button>
+                        <button onclick="setCustomerFilter('Overdue')" id="filterBtnOverdue" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-600">Overdue</button>
+                    </div>
+                </div>
+
+                <div class="px-4 pt-2 space-y-2.5" id="customerListContainer">
+                    <!-- Dynamic customer list rendering -->
+                </div>
+
+                <div class="bottom-nav staff-nav">
+                    <div class="nav-item active" onclick="switchView('staffCustomersView')"><i class="fa-solid fa-users text-lg"></i><span class="text-[10px] font-bold">Customers</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="openModal('createBillModal')"><i class="fa-solid fa-circle-plus text-lg"></i><span class="text-[10px] font-medium">New Bill</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('staffDashboardView')"><i class="fa-solid fa-list-check text-lg"></i><span class="text-[10px] font-medium">Queue</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="openModal('logoutModal')"><i class="fa-solid fa-arrow-right-from-bracket text-lg"></i><span class="text-[10px] font-medium">Logout</span><span class="nav-underline"></span></div>
+                </div>
+            </div>
+
+            <!-- STAFF: CUSTOMER PROFILE VIEW -->
+            <div id="customerProfileView" class="view bg-orbis-off min-h-full pb-24">
+                <div class="bg-orbis-navy text-white pt-10 pb-4 px-5 flex items-center justify-between">
+                    <button onclick="switchView('staffCustomersView')" class="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                    <h2 class="text-lg font-bold font-display">Customer Profile</h2>
+                    <div class="w-8"></div>
+                </div>
+
+                <div class="px-5 pt-6 flex flex-col items-center">
+                    <div class="w-20 h-20 rounded-full bg-gray-300 border-2 border-white shadow-md mb-3 flex items-center justify-center text-gray-500 text-2xl font-bold" id="cpAvatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-orbis-navy font-display" id="cpName">Denise Santos</h3>
+                    <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full mt-1" id="cpStatusBadge">Paid</span>
+
+                    <div class="bg-white rounded-2xl p-4 shadow-sm w-full mt-5 space-y-2.5 text-xs">
+                        <h4 class="font-bold text-gray-400 uppercase tracking-wider text-[10px] mb-1">Account info</h4>
+                        <div class="flex justify-between"><span class="text-gray-500">Account no.</span><span class="font-bold text-orbis-navy" id="cpAccountNo">12554368</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Mobile</span><span class="font-bold text-orbis-navy" id="cpMobile">0917 123 4567</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Address</span><span class="font-bold text-orbis-navy" id="cpAddress">Brgy. Linao, Ormoc City</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Meter no.</span><span class="font-bold text-orbis-navy" id="cpMeterNo">MW-88213</span></div>
+                    </div>
+
+                    <div class="bg-orbis-navy text-white rounded-2xl p-4 shadow-md w-full mt-3 text-center">
+                        <p class="text-white/70 text-[10px] uppercase font-semibold">Current balance</p>
+                        <h2 class="text-2xl font-extrabold mt-0.5" id="cpBalance">₱ 405.00</h2>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 w-full mt-3">
+                        <button onclick="openCreateBillModalForUser()" class="bg-gray-200 text-orbis-navy font-bold py-2.5 rounded-xl text-xs hover:bg-gray-300">Billing</button>
+                        <button onclick="showToast('Loading customer payment logs...', 'info')" class="bg-gray-200 text-orbis-navy font-bold py-2.5 rounded-xl text-xs hover:bg-gray-300">Payments</button>
+                        <button onclick="showToast('Edit profile mode enabled', 'info')" class="bg-gray-200 text-orbis-navy font-bold py-2.5 rounded-xl text-xs hover:bg-gray-300">Edit</button>
+                    </div>
+
+                    <button onclick="flagForDisconnection()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow-md mt-4 text-xs transition-transform active:scale-95">
+                        Flag for disconnection
+                    </button>
+                </div>
+
+                <div class="bottom-nav staff-nav">
+                    <div class="nav-item active" onclick="switchView('staffCustomersView')"><i class="fa-solid fa-users text-lg"></i><span class="text-[10px] font-bold">Customers</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="openModal('createBillModal')"><i class="fa-solid fa-circle-plus text-lg"></i><span class="text-[10px] font-medium">New Bill</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('staffDashboardView')"><i class="fa-solid fa-list-check text-lg"></i><span class="text-[10px] font-medium">Queue</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="openModal('logoutModal')"><i class="fa-solid fa-arrow-right-from-bracket text-lg"></i><span class="text-[10px] font-medium">Logout</span><span class="nav-underline"></span></div>
+                </div>
+            </div>
+
             <!-- ADMIN LOGIN VIEW -->
             <div id="adminLoginView" class="view flex-col items-center justify-center bg-orbis-light min-h-full px-6">
                 <button onclick="switchView('roleSelectView')" class="absolute top-5 left-5 w-10 h-10 bg-orbis-navy/10 rounded-full flex items-center justify-center text-orbis-navy">
@@ -568,11 +693,12 @@
                             <p class="text-white/70 text-xs font-semibold uppercase tracking-wide">Current Water Bill</p>
                             <span class="bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full" id="cBillStatus">Unpaid</span>
                         </div>
+                        <p class="text-white/60 text-xs mt-1" id="cPeriodLabel">Period: October 2026</p>
                         <div class="flex justify-between items-end mt-1">
                             <h1 class="text-3xl font-extrabold text-white" id="cBalance">₱405.00</h1>
                             <i class="fa-solid fa-droplet text-white/50 text-2xl mb-1"></i>
                         </div>
-                        <p class="text-white/60 text-xs mt-1" id="cDueLine">Due Date: <span id="cDueDate" class="font-bold text-white">Aug 15, 2026</span></p>
+                        <p class="text-white/60 text-xs mt-1" id="cDueLine">Due Date: <span id="cDueDate" class="font-bold text-white">2026-11-15</span></p>
                         <button id="payBillCardBtn" onclick="switchView('billView')" class="mt-4 w-full bg-white text-orbis-navy font-bold py-2.5 rounded-xl active:scale-95 transition-transform text-sm">Pay Bill Now</button>
                     </div>
 
@@ -613,11 +739,11 @@
                     <div class="bg-orbis-navy rounded-2xl p-5 shadow-lg mb-4 text-center">
                         <p class="text-white/70 text-xs font-semibold uppercase tracking-wide">Total amount due</p>
                         <h1 class="text-3xl font-extrabold text-white mt-1" id="bAmount">₱405.00</h1>
-                        <span class="inline-block mt-2 bg-white/15 text-white text-xs font-semibold px-3 py-1 rounded-full" id="bDueDate">Due Aug 15, 2026</span>
+                        <span class="inline-block mt-2 bg-white/15 text-white text-xs font-semibold px-3 py-1 rounded-full" id="bPeriodBadge">Period: October 2026</span>
                     </div>
 
                     <div class="bg-white rounded-2xl p-4 shadow-sm mb-4 space-y-2 text-xs">
-                        <div class="flex justify-between border-b pb-2"><span class="text-gray-500">Billing Period</span><span class="font-bold text-orbis-navy">October 2026</span></div>
+                        <div class="flex justify-between border-b pb-2"><span class="text-gray-500">Billing Period</span><span class="font-bold text-orbis-navy" id="bPeriodText">October 2026</span></div>
                         <div class="flex justify-between border-b pb-2"><span class="text-gray-500">Water Consumption</span><span class="font-bold text-orbis-navy" id="bConsumption">19 cu.m.</span></div>
                         <div class="flex justify-between"><span class="text-gray-500">Rate Status</span><span class="font-bold text-green-600">Standard Ormoc City Tariff</span></div>
                     </div>
@@ -753,12 +879,17 @@
 
             <!-- STAFF DASHBOARD -->
             <div id="staffDashboardView" class="view bg-orbis-light min-h-full pb-24">
-                <div class="sub-header text-left flex items-center gap-3 !pt-12 !pb-4">
-                    <div class="w-10 h-10 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white text-sm font-bold" id="sAvatar">FS</div>
-                    <div>
-                        <p class="text-white/60 text-[11px]">Staff Portal (Review & Verification)</p>
-                        <h2 class="text-white font-bold text-base font-display" id="sName">Faye Santos</h2>
+                <div class="sub-header text-left flex items-center justify-between !pt-12 !pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white text-sm font-bold" id="sAvatar">FS</div>
+                        <div>
+                            <p class="text-white/60 text-[11px]">Staff Portal (Review & Verification)</p>
+                            <h2 class="text-white font-bold text-base font-display" id="sName">Faye Santos</h2>
+                        </div>
                     </div>
+                    <button onclick="switchView('staffCustomersView')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 shadow">
+                        <i class="fa-solid fa-users"></i> Customers
+                    </button>
                 </div>
                 <div class="px-5 pt-5">
                     <div class="grid grid-cols-2 gap-3 mb-4">
@@ -796,8 +927,10 @@
                     <button onclick="openModal('logoutModal')" class="w-full bg-red-500 text-white font-bold py-3 rounded-xl active:scale-95 transition-transform mt-4">Log Out</button>
                 </div>
                 <div class="bottom-nav staff-nav">
-                    <div class="nav-item active" onclick="switchView('staffDashboardView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
-                    <div class="nav-item" onclick="openModal('logoutModal')"><i class="fa-solid fa-user text-lg"></i><span class="text-[10px] font-medium">Profile</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('staffDashboardView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Queue</span><span class="nav-underline"></span></div>
+                    <div class="nav-item active" onclick="switchView('staffCustomersView')"><i class="fa-solid fa-users text-lg"></i><span class="text-[10px] font-bold">Customers</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="openModal('createBillModal')"><i class="fa-solid fa-circle-plus text-lg"></i><span class="text-[10px] font-medium">New Bill</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="openModal('logoutModal')"><i class="fa-solid fa-arrow-right-from-bracket text-lg"></i><span class="text-[10px] font-medium">Logout</span><span class="nav-underline"></span></div>
                 </div>
             </div>
 
@@ -870,6 +1003,34 @@
 
                         <!-- TAB 1: Executive Approval Queue -->
                         <div id="adminTabApprovals" class="space-y-6">
+                            <!-- Step 2: Bills / Advance Payments Awaiting Admin Approval -->
+                            <div class="bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-sm font-bold text-orbis-navy font-display flex items-center gap-2">
+                                        <i class="fa-solid fa-file-circle-plus text-blue-600"></i>
+                                        Step 2: New Bills / Advance Payments Awaiting Admin Approval
+                                    </h3>
+                                    <span class="bg-amber-100 text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full" id="approvalBillBadgeCount">0 Pending</span>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse text-xs">
+                                        <thead>
+                                            <tr class="border-b border-gray-200 text-gray-400">
+                                                <th class="py-2.5 px-3">Account No</th>
+                                                <th class="py-2.5 px-3">Billing Period</th>
+                                                <th class="py-2.5 px-3">Readings (Prev/Pres)</th>
+                                                <th class="py-2.5 px-3">Amount</th>
+                                                <th class="py-2.5 px-3">Due Date</th>
+                                                <th class="py-2.5 px-3 text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="adminPendingBillsTable">
+                                            <tr><td colspan="6" class="text-center py-6 text-gray-400">No new bills awaiting approval.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
                             <div class="bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
                                 <div class="flex justify-between items-center mb-4">
                                     <h3 class="text-sm font-bold text-orbis-navy font-display flex items-center gap-2">
@@ -947,23 +1108,27 @@
                         </div>
 
                         <!-- TAB 3: Live System Audit Logs -->
-                        <div id="adminTabLogs" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
-                            <h3 class="text-sm font-bold text-orbis-navy font-display mb-4">Live System Audit Trails (`audit_logs` Table)</h3>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse text-xs">
-                                    <thead>
-                                        <tr class="border-b border-gray-200 text-gray-400">
-                                            <th class="py-2 px-3">Timestamp</th>
-                                            <th class="py-2 px-3">User / Role</th>
-                                            <th class="py-2 px-3">Action Type</th>
-                                            <th class="py-2 px-3">Details / Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="auditTrailTable">
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+<div id="adminTabLogs" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-sm font-bold text-orbis-navy font-display">Live System Audit Trails (`audit_logs` Table)</h3>
+        <span id="logCountBadge" class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">Loading...</span>
+    </div>
+    <div class="overflow-x-auto max-h-[520px] overflow-y-auto rounded-xl border border-gray-100">
+        <table class="w-full text-left border-collapse text-xs">
+            <thead class="sticky top-0 bg-white border-b border-gray-200 text-gray-400 shadow-sm z-10">
+                <tr>
+                    <th class="py-2.5 px-3 bg-white">Timestamp</th>
+                    <th class="py-2.5 px-3 bg-white">User / Role</th>
+                    <th class="py-2.5 px-3 bg-white">Action Type</th>
+                    <th class="py-2.5 px-3 bg-white">Details / Status</th>
+                </tr>
+            </thead>
+            <tbody id="auditTrailTable">
+                <tr><td colspan="4" class="text-center py-6 text-gray-400">Loading audit trail history...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
                     </main>
                 </div>
             </div>
@@ -980,6 +1145,17 @@
         let activeUserBill = null;
         let failedAttempts = 0;
         let lockoutUntil = null;
+
+        // Staff & Customer Directory State
+        let customersList = [
+            { name: 'Rico Ramos', accountNo: '12554368', brgy: 'Brgy. Linao', status: 'Unpaid', mobile: '0917 123 4567', meterNo: 'MW-88213', balance: '405.00' },
+            { name: 'Denise Santos', accountNo: '10432', brgy: 'Brgy. Cogon', status: 'Paid', mobile: '0917 xxx xxxx', meterNo: 'MW-88213', balance: '0.00' },
+            { name: 'Mark Reyes', accountNo: '10455', brgy: 'Brgy. Lawaan', status: 'Pending', mobile: '0918 xxx xxxx', meterNo: 'MW-99120', balance: '520.00' },
+            { name: 'Ana Cruz', accountNo: '10201', brgy: 'Brgy. Cogon', status: 'Overdue', mobile: '0919 xxx xxxx', meterNo: 'MW-33109', balance: '850.00' }
+        ];
+        let selectedCustomer = null;
+        let activeCustomerFilter = 'All';
+        let pendingBillsQueue = []; // Step 1 & Step 2 Bill Queue
 
         // Core Supabase REST API Fetch Helper
         async function dbFetch(table, options = {}) {
@@ -1064,6 +1240,8 @@
                 loadAdminData();
             } else if (viewId === 'staffDashboardView') {
                 loadStaffData();
+            } else if (viewId === 'staffCustomersView') {
+                renderCustomersList();
             } else if (viewId === 'notificationsView') {
                 loadUserNotifications();
             } else if (viewId === 'paymentHistoryView') {
@@ -1071,7 +1249,50 @@
             }
         }
 
-        function openModal(modalId) { document.getElementById(modalId).classList.add('active'); }
+        // Dynamic Account Dropdown Population for Create Bill Modal
+        async function populateBillAccountDropdown(selectedAccountNo = null) {
+            const dropdown = document.getElementById('billAccountNum');
+            if (!dropdown) return;
+
+            dropdown.innerHTML = '<option value="">Loading accounts...</option>';
+
+            const users = await dbFetch('users', {
+                method: 'GET',
+                query: 'role=eq.Consumer&select=water_account_number,full_name&order=full_name.asc'
+            });
+
+            dropdown.innerHTML = '<option value="">-- Select Resident Account --</option>';
+
+            if (users && users.length > 0) {
+                users.forEach(u => {
+                    const option = document.createElement('option');
+                    option.value = u.water_account_number;
+                    option.textContent = `${u.full_name} (Acct: ${u.water_account_number})`;
+                    if (selectedAccountNo && u.water_account_number === selectedAccountNo) {
+                        option.selected = true;
+                    }
+                    dropdown.appendChild(option);
+                });
+            } else {
+                customersList.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c.accountNo;
+                    option.textContent = `${c.name} (Acct: ${c.accountNo})`;
+                    if (selectedAccountNo && c.accountNo === selectedAccountNo) {
+                        option.selected = true;
+                    }
+                    dropdown.appendChild(option);
+                });
+            }
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+            if (modalId === 'createBillModal') {
+                populateBillAccountDropdown();
+            }
+        }
+        
         function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
         
         function confirmLogout() {
@@ -1138,6 +1359,157 @@
                 console.warn('Payment log write skipped:', err);
             }
         }
+
+        // --- STAFF CUSTOMER DIRECTORY & MANAGEMENT ---
+        async function renderCustomersList() {
+            const container = document.getElementById('customerListContainer');
+            const query = document.getElementById('customerSearchInput').value.toLowerCase().trim();
+
+            const dbUsers = await dbFetch('users', {
+                method: 'GET',
+                query: 'role=eq.Consumer&select=*'
+            });
+
+            let list = [];
+            if (dbUsers && Array.isArray(dbUsers) && dbUsers.length > 0) {
+                list = dbUsers.map(u => ({
+                    name: u.full_name,
+                    accountNo: u.water_account_number,
+                    brgy: u.address || 'Ormoc City',
+                    status: 'Active',
+                    mobile: u.mobile_number || 'N/A',
+                    meterNo: 'MW-' + u.water_account_number.slice(-4),
+                    balance: '405.00',
+                    userId: u.user_id
+                }));
+            } else {
+                list = customersList;
+            }
+
+            const filtered = list.filter(c => {
+                const matchesFilter = activeCustomerFilter === 'All' || 
+                    (activeCustomerFilter === 'Active' && c.status !== 'Overdue') ||
+                    (activeCustomerFilter === 'Overdue' && c.status === 'Overdue');
+                const matchesQuery = c.name.toLowerCase().includes(query) || c.accountNo.includes(query);
+                return matchesFilter && matchesQuery;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p class="text-center text-xs text-gray-400 py-6">No customers found.</p>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(c => `
+                <div onclick="openCustomerProfile('${c.accountNo}')" class="bg-white rounded-2xl p-3.5 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer active:scale-98 transition-transform">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-orbis-navy/10 flex items-center justify-center text-orbis-navy font-bold text-xs">
+                            ${c.name.split(' ').map(n=>n[0]).join('')}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-xs text-orbis-navy">${c.name}</h4>
+                            <p class="text-[10px] text-gray-400">Acct #${c.accountNo} · ${c.brgy}</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full ${c.status === 'Paid' ? 'bg-green-100 text-green-700' : (c.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600')}">
+                        ${c.status}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function setCustomerFilter(filter) {
+            activeCustomerFilter = filter;
+            ['All', 'Active', 'Overdue'].forEach(f => {
+                const btn = document.getElementById(`filterBtn${f}`);
+                if (f === filter) {
+                    btn.className = 'px-3 py-1 rounded-full text-xs font-bold bg-orbis-navy text-white';
+                } else {
+                    btn.className = 'px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-600';
+                }
+            });
+            renderCustomersList();
+        }
+
+        function filterCustomers() { renderCustomersList(); }
+
+        async function openCustomerProfile(accountNo) {
+            let customer = customersList.find(c => c.accountNo === accountNo);
+
+            if (!customer) {
+                const dbUsers = await dbFetch('users', {
+                    method: 'GET',
+                    query: `water_account_number=eq.${encodeURIComponent(accountNo)}`
+                });
+
+                if (dbUsers && dbUsers.length > 0) {
+                    const u = dbUsers[0];
+                    customer = {
+                        name: u.full_name,
+                        accountNo: u.water_account_number,
+                        brgy: u.address || 'Ormoc City',
+                        status: 'Active',
+                        mobile: u.mobile_number || 'N/A',
+                        meterNo: 'MW-' + u.water_account_number.slice(-4),
+                        balance: '405.00'
+                    };
+                }
+            }
+
+            if (!customer) return;
+
+            selectedCustomer = customer;
+            document.getElementById('cpName').textContent = customer.name;
+            document.getElementById('cpAccountNo').textContent = customer.accountNo;
+            document.getElementById('cpMobile').textContent = customer.mobile;
+            document.getElementById('cpAddress').textContent = customer.brgy;
+            document.getElementById('cpMeterNo').textContent = customer.meterNo;
+            document.getElementById('cpBalance').textContent = `₱ ${customer.balance}`;
+            document.getElementById('cpStatusBadge').textContent = customer.status;
+
+            switchView('customerProfileView');
+        }
+
+        function openCreateBillModalForUser() {
+            openModal('createBillModal');
+            if (selectedCustomer) {
+                populateBillAccountDropdown(selectedCustomer.accountNo);
+            }
+        }
+
+        function flagForDisconnection() {
+            if (!selectedCustomer) return;
+            selectedCustomer.status = 'Overdue';
+            addAuditRow('Faye Santos (Staff)', 'Meter Reader', 'Flagged Disconnection', `Flagged Customer Acct #${selectedCustomer.accountNo} for disconnection`, 'red');
+            showToast(`Customer #${selectedCustomer.accountNo} flagged for disconnection.`, 'error');
+            openCustomerProfile(selectedCustomer.accountNo);
+        }
+
+        // --- STEP 1: STAFF CREATE NEW BILL / ADVANCE PAYMENT ---
+        document.getElementById('createBillForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const acctSelect = document.getElementById('billAccountNum');
+            const selectedAcct = acctSelect.value.trim();
+
+            if (!selectedAcct) {
+                return showToast('Please select a resident water account.', 'error');
+            }
+
+            const newBill = {
+                id: Date.now(),
+                accountNum: selectedAcct,
+                period: document.getElementById('billPeriod').value.trim(),
+                prevReading: document.getElementById('billPrevReading').value,
+                presReading: document.getElementById('billPresReading').value,
+                amount: parseFloat(document.getElementById('billAmount').value).toFixed(2),
+                dueDate: document.getElementById('billDueDate').value
+            };
+
+            pendingBillsQueue.push(newBill);
+            addAuditRow('Faye Santos (Staff)', 'Meter Reader', 'Created New Bill', `Account ${newBill.accountNum} - ₱${newBill.amount} (${newBill.period})`, 'blue');
+            
+            closeModal('createBillModal');
+            showToast('Step 1 Complete: Bill generated & sent to Admin for approval!', 'success');
+        });
 
         // Toggle Admin Executive Navigation Tabs
         function switchAdminTab(tab) {
@@ -1206,6 +1578,34 @@
                 });
             }
 
+            // --- STEP 2: RENDER PENDING BILLS AWAITING ADMIN APPROVAL ---
+            const billsTable = document.getElementById('adminPendingBillsTable');
+            const billBadge = document.getElementById('approvalBillBadgeCount');
+            if (billBadge) billBadge.textContent = `${pendingBillsQueue.length} Pending`;
+
+            if (pendingBillsQueue.length > 0) {
+                billsTable.innerHTML = '';
+                pendingBillsQueue.forEach(b => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-100';
+                    row.innerHTML = `
+                        <td class="py-3 px-3 font-semibold text-orbis-navy">${b.accountNum}</td>
+                        <td class="py-3 px-3">${b.period}</td>
+                        <td class="py-3 px-3">${b.prevReading} / ${b.presReading}</td>
+                        <td class="py-3 px-3 font-bold text-orbis-navy">₱${b.amount}</td>
+                        <td class="py-3 px-3">${b.dueDate}</td>
+                        <td class="py-3 px-3 text-right">
+                            <button onclick="approveBillByAdmin(${b.id})" class="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1.5 rounded-lg shadow text-xs transition-transform active:scale-95">
+                                <i class="fa-solid fa-check mr-1"></i> Approve & Publish
+                            </button>
+                        </td>
+                    `;
+                    billsTable.appendChild(row);
+                });
+            } else {
+                billsTable.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">No new bills awaiting approval.</td></tr>';
+            }
+
             // 3. Fetch Endorsed Payments Awaiting Admin Approval
             const staffApprovedPayments = await dbFetch('payments', {
                 method: 'GET',
@@ -1214,8 +1614,8 @@
 
             const paymentsTable = document.getElementById('adminPaymentsTable');
             if (staffApprovedPayments && Array.isArray(staffApprovedPayments) && staffApprovedPayments.length > 0) {
-                document.getElementById('admStatPendingApprovals').textContent = staffApprovedPayments.length;
-                document.getElementById('badgePendingApprovals').textContent = staffApprovedPayments.length;
+                document.getElementById('admStatPendingApprovals').textContent = staffApprovedPayments.length + pendingBillsQueue.length;
+                document.getElementById('badgePendingApprovals').textContent = staffApprovedPayments.length + pendingBillsQueue.length;
                 paymentsTable.innerHTML = '';
                 staffApprovedPayments.forEach(p => {
                     const row = document.createElement('tr');
@@ -1238,8 +1638,8 @@
                     paymentsTable.appendChild(row);
                 });
             } else {
-                document.getElementById('admStatPendingApprovals').textContent = '0';
-                document.getElementById('badgePendingApprovals').textContent = '0';
+                document.getElementById('admStatPendingApprovals').textContent = pendingBillsQueue.length;
+                document.getElementById('badgePendingApprovals').textContent = pendingBillsQueue.length;
                 paymentsTable.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">No staff-endorsed payments awaiting Admin approval.</td></tr>';
             }
 
@@ -1275,30 +1675,70 @@
             }
         }
 
-        // FIXED: Admin Final Executive Approval for Payment (Upsert Bill & Settle to 0)
+        // --- STEP 3: ADMIN APPROVE & PUBLISH BILL TO RESIDENT (DYNAMIC USER LOOKUP) ---
+        async function approveBillByAdmin(billId) {
+            const index = pendingBillsQueue.findIndex(b => b.id === billId);
+            if (index === -1) return;
+
+            const approved = pendingBillsQueue.splice(index, 1)[0];
+
+            // Look up real user_id from Supabase matching the water_account_number
+            const users = await dbFetch('users', {
+                method: 'GET',
+                query: `water_account_number=eq.${encodeURIComponent(approved.accountNum)}`
+            });
+
+            let targetUserId = 2; // Fallback default
+            if (users && users.length > 0) {
+                targetUserId = users[0].user_id;
+            }
+
+            // Save to Supabase bills table under targetUserId
+            await dbFetch('bills', {
+                method: 'POST',
+                body: {
+                    user_id: targetUserId,
+                    amount: parseFloat(approved.amount),
+                    status: 'Unpaid',
+                    billing_period: approved.period,
+                    due_date: approved.dueDate
+                }
+            });
+
+            if (currentUser && currentUser.user_id === targetUserId) {
+                activeUserBill = {
+                    amount: approved.amount,
+                    status: 'Unpaid',
+                    billing_period: approved.period,
+                    due_date: approved.dueDate
+                };
+            }
+
+            addAuditRow('admin_ormoc', 'Admin', 'Approved New Bill', `Published bill for Account ${approved.accountNum} (₱${approved.amount})`, 'green');
+            loadAdminData();
+            showToast(`Step 3 Complete: Bill (₱${approved.amount}) approved & published to Account #${approved.accountNum}!`, 'success');
+        }
+
+        // Admin Final Executive Approval for Payment (Upsert Bill & Settle to 0)
         async function adminApprovePayment(paymentId, userId, amount) {
-            // 1. Mark Payment Status as Verified in Supabase
             await dbFetch('payments', {
                 method: 'PATCH',
                 query: `payment_id=eq.${paymentId}`,
                 body: { status: 'Verified' }
             });
 
-            // 2. Check if a bill record already exists for this User ID in Supabase
             const existingBills = await dbFetch('bills', {
                 method: 'GET',
                 query: `user_id=eq.${userId}`
             });
 
             if (existingBills && existingBills.length > 0) {
-                // Update existing bill row to Paid and amount 0
                 await dbFetch('bills', {
                     method: 'PATCH',
                     query: `user_id=eq.${userId}`,
                     body: { status: 'Paid', amount: 0 }
                 });
             } else {
-                // Insert new Paid bill row for this user in Supabase
                 await dbFetch('bills', {
                     method: 'POST',
                     body: {
@@ -1306,7 +1746,7 @@
                         amount: 0,
                         status: 'Paid',
                         billing_period: 'October 2026',
-                        due_date: '2026-08-15'
+                        due_date: '2026-11-15'
                     }
                 });
             }
@@ -1348,7 +1788,7 @@
             loadAdminData();
         }
 
-        // FIXED: Load Consumer Bill and Sync Paid Status & 0 Balance
+        // Load Consumer Bill and Reset Unpaid/Paid Balance States
         async function loadUserBill(userId) {
             const bills = await dbFetch('bills', {
                 method: 'GET',
@@ -1362,16 +1802,29 @@
             if (bills && bills.length > 0) {
                 activeUserBill = bills[0];
                 const isPaid = activeUserBill.status === 'Paid';
-                const billAmt = isPaid ? 0 : (parseFloat(activeUserBill.amount) || 405.00);
+                const billAmt = isPaid ? 0 : (parseFloat(activeUserBill.amount) || 0.00);
                 const amtFormatted = "₱" + billAmt.toFixed(2);
 
                 document.getElementById('cBalance').textContent = amtFormatted;
                 document.getElementById('bAmount').textContent = amtFormatted;
                 document.getElementById('payAmount').textContent = amtFormatted;
                 document.getElementById('confAmount').textContent = amtFormatted;
-                statusBadge.textContent = activeUserBill.status || 'Unpaid';
+
+                if (activeUserBill.billing_period) {
+                    const periodEl = document.getElementById('cPeriodLabel');
+                    if (periodEl) periodEl.textContent = `Period: ${activeUserBill.billing_period}`;
+                    const bBadge = document.getElementById('bPeriodBadge');
+                    if (bBadge) bBadge.textContent = `Period: ${activeUserBill.billing_period}`;
+                    const bText = document.getElementById('bPeriodText');
+                    if (bText) bText.textContent = activeUserBill.billing_period;
+                }
+                if (activeUserBill.due_date) {
+                    const dueEl = document.getElementById('cDueDate');
+                    if (dueEl) dueEl.textContent = activeUserBill.due_date;
+                }
 
                 if (isPaid) {
+                    statusBadge.textContent = 'Paid';
                     statusBadge.className = 'bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full';
                     if (cardBtn) {
                         cardBtn.textContent = 'Bill Settled (Paid)';
@@ -1383,24 +1836,41 @@
                         viewBtn.disabled = true;
                         viewBtn.className = 'w-full bg-gray-400 text-white font-bold py-3.5 rounded-xl shadow-lg cursor-not-allowed';
                     }
-                } else if (activeUserBill.status === 'Disconnection Warning' || activeUserBill.status === 'Cut-Off' || activeUserBill.status === 'Cut-Off Requested') {
-                    statusBadge.className = 'bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse';
                 } else {
-                    statusBadge.className = 'bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full';
+                    statusBadge.textContent = activeUserBill.status || 'Unpaid';
+                    if (activeUserBill.status === 'Disconnection Warning' || activeUserBill.status === 'Cut-Off' || activeUserBill.status === 'Cut-Off Requested') {
+                        statusBadge.className = 'bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse';
+                    } else {
+                        statusBadge.className = 'bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full';
+                    }
+                    if (cardBtn) {
+                        cardBtn.textContent = 'Pay Bill Now';
+                        cardBtn.disabled = false;
+                        cardBtn.className = 'mt-4 w-full bg-white text-orbis-navy font-bold py-2.5 rounded-xl active:scale-95 transition-transform text-sm';
+                    }
+                    if (viewBtn) {
+                        viewBtn.textContent = 'Pay Bill Now';
+                        viewBtn.disabled = false;
+                        viewBtn.className = 'w-full bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform';
+                    }
                 }
             } else {
-                // If no bill row in DB yet, check for pending or verified payment to determine status
-                const userPayments = await dbFetch('payments', {
-                    method: 'GET',
-                    query: `user_id=eq.${userId}&order=payment_id.desc&limit=1`
-                });
-
-                if (userPayments && userPayments.length > 0 && userPayments[0].status === 'Verified') {
-                    document.getElementById('cBalance').textContent = "₱0.00";
-                    document.getElementById('bAmount').textContent = "₱0.00";
-                    statusBadge.textContent = "Paid";
-                    statusBadge.className = "bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full";
-                    if (cardBtn) { cardBtn.textContent = 'Bill Settled (Paid)'; cardBtn.disabled = true; }
+                activeUserBill = null;
+                document.getElementById('cBalance').textContent = "₱0.00";
+                document.getElementById('bAmount').textContent = "₱0.00";
+                document.getElementById('payAmount').textContent = "₱0.00";
+                document.getElementById('confAmount').textContent = "₱0.00";
+                statusBadge.textContent = "No Bill Due";
+                statusBadge.className = "bg-gray-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full";
+                if (cardBtn) {
+                    cardBtn.textContent = 'No Bill Due';
+                    cardBtn.disabled = true;
+                    cardBtn.className = 'mt-4 w-full bg-white/20 text-white/50 font-bold py-2.5 rounded-xl text-sm cursor-not-allowed';
+                }
+                if (viewBtn) {
+                    viewBtn.textContent = 'No Bill Due';
+                    viewBtn.disabled = true;
+                    viewBtn.className = 'w-full bg-gray-400 text-white font-bold py-3.5 rounded-xl shadow-lg cursor-not-allowed';
                 }
             }
         }
@@ -1420,7 +1890,7 @@
 
             const users = await dbFetch('users', {
                 method: 'GET',
-                query: `water_account_number=eq.${account}`
+                query: `water_account_number=eq.${encodeURIComponent(account)}`
             });
 
             if (users && users.length > 0) {
@@ -1466,7 +1936,7 @@
 
             const users = await dbFetch('users', {
                 method: 'GET',
-                query: `water_account_number=eq.${acct}`
+                query: `water_account_number=eq.${encodeURIComponent(acct)}`
             });
 
             let targetUserId = 2;
@@ -1524,7 +1994,7 @@
 
             await dbFetch('users', {
                 method: 'PATCH',
-                query: `water_account_number=eq.${acct}`,
+                query: `water_account_number=eq.${encodeURIComponent(acct)}`,
                 body: { password_hash: newPass }
             });
 
@@ -1535,7 +2005,7 @@
             addAuditRow(acct, 'Resident', 'Password Reset', 'Password reset verified & updated in DB', 'green');
         });
 
-        // FIXED: Auto-seed initial bill row for Consumer during registration
+        // Auto-seed initial bill row for Consumer during registration
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const role = document.getElementById('regRole').value;
@@ -1560,7 +2030,7 @@
 
             const existingUsers = await dbFetch('users', {
                 method: 'GET',
-                query: `water_account_number=eq.${account}`
+                query: `water_account_number=eq.${encodeURIComponent(account)}`
             });
 
             if (existingUsers && existingUsers.length > 0) {
@@ -1580,35 +2050,43 @@
                 }
             });
 
-            if (newUser && Array.isArray(newUser) && newUser.length > 0) {
-                const createdUserId = newUser[0].user_id || newUser[0].id;
+            let createdUserId = null;
+            if (Array.isArray(newUser) && newUser.length > 0) {
+                createdUserId = newUser[0].user_id || newUser[0].id;
+            } else if (newUser && typeof newUser === 'object') {
+                createdUserId = newUser.user_id || newUser.id;
+            }
 
-                // Auto-create initial Unpaid bill for Consumer accounts
-                if (role === 'Consumer') {
-                    await dbFetch('bills', {
-                        method: 'POST',
-                        body: {
-                            user_id: createdUserId,
-                            amount: 405.00,
-                            status: 'Unpaid',
-                            billing_period: 'October 2026',
-                            due_date: '2026-08-15'
-                        }
-                    });
-                }
+            if (!createdUserId) {
+                const fetched = await dbFetch('users', {
+                    method: 'GET',
+                    query: `water_account_number=eq.${encodeURIComponent(account)}`
+                });
+                if (fetched && fetched.length > 0) createdUserId = fetched[0].user_id;
+            }
 
-                addPaymentLog('Account Registered', name, `Created new ${role} account (${account})`);
-                addAuditRow(createdUserId, role, 'Registration', `Created ${role} account for ${name}`, 'green');
+            if (createdUserId && role === 'Consumer') {
+                await dbFetch('bills', {
+                    method: 'POST',
+                    body: {
+                        user_id: createdUserId,
+                        amount: 405.00,
+                        status: 'Unpaid',
+                        billing_period: 'October 2026',
+                        due_date: '2026-11-15'
+                    }
+                });
+            }
 
-                showToast(`${role} account created in database!`, 'success');
-                document.getElementById('registerForm').reset();
-                if (role === 'MeterReader') {
-                    switchView('staffLoginView');
-                } else {
-                    switchView('loginView');
-                }
+            addPaymentLog('Account Registered', name, `Created new ${role} account (${account})`);
+            addAuditRow(createdUserId || 2, role, 'Registration', `Created ${role} account for ${name}`, 'green');
+
+            showToast(`${role} account created in database!`, 'success');
+            document.getElementById('registerForm').reset();
+            if (role === 'MeterReader') {
+                switchView('staffLoginView');
             } else {
-                showToast('Failed to register user. Please check database configuration.', 'error');
+                switchView('loginView');
             }
         });
 
@@ -1622,7 +2100,7 @@
 
             const users = await dbFetch('users', {
                 method: 'GET',
-                query: `water_account_number=eq.${id}&role=eq.MeterReader`
+                query: `water_account_number=eq.${encodeURIComponent(id)}&role=eq.MeterReader`
             });
 
             if (users && users.length > 0) {
@@ -1636,7 +2114,7 @@
                 const initials = currentUser.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
                 document.getElementById('sAvatar').textContent = initials || 'ST';
 
-                switchView('staffDashboardView');
+                switchView('staffCustomersView');
                 showToast(`Welcome, ${currentUser.full_name}!`, 'success');
                 addAuditRow(currentUser.user_id, 'Meter Reader', 'Staff Login', `Logged in as ${currentUser.full_name}`, 'green');
             } else if (id === 'STF-2201' && (pass === 'Password123!' || pass === 'password123')) {
@@ -1644,7 +2122,7 @@
                 document.getElementById('sName').textContent = 'Faye Santos';
                 document.getElementById('sAvatar').textContent = 'FS';
 
-                switchView('staffDashboardView');
+                switchView('staffCustomersView');
                 showToast('Staff Portal access authorized.', 'success');
                 addAuditRow('STF-2201', 'Meter Reader', 'Staff Login', 'Logged in as Faye Santos', 'green');
             } else {
@@ -1662,7 +2140,7 @@
 
             const users = await dbFetch('users', {
                 method: 'GET',
-                query: `water_account_number=eq.${user}&role=eq.Admin`
+                query: `water_account_number=eq.${encodeURIComponent(user)}&role=eq.Admin`
             });
 
             if (users && users.length > 0 && users[0].password_hash === pass) {
@@ -1933,31 +2411,64 @@
             }
         }
 
-        // Fetch Audit Logs for Admin Log Tab
         async function loadAuditLogs() {
-            const logs = await dbFetch('audit_logs', {
-                method: 'GET',
-                query: 'select=*&order=created_at.desc&limit=25'
-            });
+    // Query audit_logs without restrictive limits to fetch all database records
+    const logs = await dbFetch('audit_logs', {
+        method: 'GET',
+        query: 'select=*&order=created_at.desc'
+    });
 
-            const table = document.getElementById('auditTrailTable');
-            if (logs && Array.isArray(logs) && logs.length > 0) {
-                table.innerHTML = '';
-                logs.forEach(log => {
-                    const timeStr = log.created_at ? log.created_at.slice(0, 16).replace('T', ' ') : 'Just now';
-                    const color = log.action.includes('Verified') || log.action.includes('Approved') ? 'green' : (log.action.includes('Reject') || log.action.includes('Warning') || log.action.includes('Cut-Off') ? 'red' : 'blue');
-                    const row = document.createElement('tr');
-                    row.className = 'border-b border-gray-100';
-                    row.innerHTML = `
-                        <td class="py-2.5 px-3">${timeStr}</td>
-                        <td class="py-2.5 px-3 font-semibold">User ID ${log.user_id || '2'} (${log.user_role || 'User'})</td>
-                        <td class="py-2.5 px-3"><span class="bg-${color}-100 text-${color}-700 px-2 py-0.5 rounded-full font-bold">${log.action}</span></td>
-                        <td class="py-2.5 px-3">${log.details}</td>
-                    `;
-                    table.appendChild(row);
-                });
+    const table = document.getElementById('auditTrailTable');
+    const badge = document.getElementById('logCountBadge');
+    if (!table) return;
+
+    if (logs && Array.isArray(logs) && logs.length > 0) {
+        if (badge) badge.textContent = `${logs.length} Total Records`;
+        table.innerHTML = '';
+        
+        logs.forEach(log => {
+            let timeStr = 'Just now';
+            if (log.created_at) {
+                const d = new Date(log.created_at);
+                const yr = d.getFullYear();
+                const mo = String(d.getMonth() + 1).padStart(2, '0');
+                const da = String(d.getDate()).padStart(2, '0');
+                const hr = String(d.getHours()).padStart(2, '0');
+                const mi = String(d.getMinutes()).padStart(2, '0');
+                timeStr = `${yr}-${mo}-${da} ${hr}:${mi}`;
             }
-        }
+
+            const act = log.action || '';
+            let badgeClass = 'bg-blue-100 text-blue-700';
+            if (act.includes('Login') || act.includes('Approved') || act.includes('Verified')) {
+                badgeClass = 'bg-blue-100 text-blue-700';
+                if (act.includes('Admin Login')) badgeClass = 'bg-indigo-100 text-indigo-700';
+            } else if (act.includes('Logout')) {
+                badgeClass = 'bg-gray-100 text-gray-700';
+            } else if (act.includes('Cut-Off') || act.includes('Reject') || act.includes('Warning')) {
+                badgeClass = 'bg-red-100 text-red-700';
+            } else if (act.includes('Registration') || act.includes('Initialization')) {
+                badgeClass = 'bg-green-100 text-green-700';
+            }
+
+            const userRole = log.user_role ? ` (${log.user_role})` : '';
+            const userIdDisplay = log.user_id ? `User ID ${log.user_id}${userRole}` : `System`;
+
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-100 hover:bg-gray-50/50 transition-colors';
+            row.innerHTML = `
+                <td class="py-2.5 px-3 whitespace-nowrap text-gray-500 font-mono text-[11px]">${timeStr}</td>
+                <td class="py-2.5 px-3 font-semibold text-orbis-navy whitespace-nowrap">${userIdDisplay}</td>
+                <td class="py-2.5 px-3 whitespace-nowrap"><span class="${badgeClass} px-2 py-0.5 rounded-full font-bold text-[10px]">${act}</span></td>
+                <td class="py-2.5 px-3 text-gray-600">${log.details || ''}</td>
+            `;
+            table.appendChild(row);
+        });
+    } else {
+        if (badge) badge.textContent = '0 Records';
+        table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-400">No audit logs found in database.</td></tr>';
+    }
+}
 
         // Clock
         setInterval(() => {
