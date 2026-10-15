@@ -250,7 +250,21 @@
             </div>
         </div>
 
-        <!-- STAFF: Create New Bill / Advance Payment Modal (Step 1) -->
+        <!-- Customer Payments Modal (For Staff View) -->
+        <div id="customerPaymentsModal" class="modal-overlay">
+            <div class="bg-white p-6 rounded-3xl w-[90%] max-w-md shadow-2xl">
+                <div class="flex justify-between items-center mb-4 border-b pb-3">
+                    <h3 class="text-lg font-bold text-orbis-navy font-display"><i class="fa-solid fa-receipt text-blue-600 mr-2"></i>Customer Payment History</h3>
+                    <button onclick="closeModal('customerPaymentsModal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                <div id="customerPaymentsContainer" class="space-y-2.5 max-h-[320px] overflow-y-auto">
+                    <p class="text-center text-xs text-gray-400 py-6">Loading customer payments...</p>
+                </div>
+                <button onclick="closeModal('customerPaymentsModal')" class="w-full mt-4 py-3 rounded-xl font-bold bg-orbis-navy text-white">Close</button>
+            </div>
+        </div>
+
+        <!-- STAFF: Create New Bill Modal -->
         <div id="createBillModal" class="modal-overlay">
             <div class="bg-white p-6 rounded-3xl w-[90%] max-w-md shadow-2xl">
                 <div class="flex justify-between items-center mb-4 border-b pb-3">
@@ -619,7 +633,7 @@
 
                     <div class="grid grid-cols-3 gap-2 w-full mt-3">
                         <button onclick="openCreateBillModalForUser()" class="bg-gray-200 text-orbis-navy font-bold py-2.5 rounded-xl text-xs hover:bg-gray-300">Billing</button>
-                        <button onclick="showToast('Loading customer payment logs...', 'info')" class="bg-gray-200 text-orbis-navy font-bold py-2.5 rounded-xl text-xs hover:bg-gray-300">Payments</button>
+                        <button onclick="viewCustomerPayments()" class="bg-gray-200 text-orbis-navy font-bold py-2.5 rounded-xl text-xs hover:bg-gray-300">Payments</button>
                         <button onclick="showToast('Edit profile mode enabled', 'info')" class="bg-gray-200 text-orbis-navy font-bold py-2.5 rounded-xl text-xs hover:bg-gray-300">Edit</button>
                     </div>
 
@@ -908,7 +922,6 @@
                         <button onclick="switchStaffTab('unpaid')" id="btnTabUnpaid" class="flex-1 py-2.5 rounded-xl font-bold text-xs bg-white text-orbis-navy border border-orbis-navy/20">Unpaid & Cut-Offs</button>
                     </div>
 
-                    <!-- Staff Payments Queue Section -->
                     <div id="staffPaymentsTab" class="space-y-3">
                         <p class="text-xs font-bold text-orbis-navy uppercase tracking-wider mb-1">Awaiting Staff Endorsement (`payments` table)</p>
                         <div id="staffQueue">
@@ -916,7 +929,6 @@
                         </div>
                     </div>
 
-                    <!-- Staff Unpaid & Cut-off Warnings Section -->
                     <div id="staffUnpaidTab" class="hidden space-y-3">
                         <p class="text-xs font-bold text-orbis-navy uppercase tracking-wider mb-1">Unpaid Bills & Cut-Off Requests (`bills` table)</p>
                         <div id="staffUnpaidQueue">
@@ -1003,7 +1015,6 @@
 
                         <!-- TAB 1: Executive Approval Queue -->
                         <div id="adminTabApprovals" class="space-y-6">
-                            <!-- Step 2: Bills / Advance Payments Awaiting Admin Approval -->
                             <div class="bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
                                 <div class="flex justify-between items-center mb-4">
                                     <h3 class="text-sm font-bold text-orbis-navy font-display flex items-center gap-2">
@@ -1108,27 +1119,27 @@
                         </div>
 
                         <!-- TAB 3: Live System Audit Logs -->
-<div id="adminTabLogs" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
-    <div class="flex justify-between items-center mb-4">
-        <h3 class="text-sm font-bold text-orbis-navy font-display">Live System Audit Trails (`audit_logs` Table)</h3>
-        <span id="logCountBadge" class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">Loading...</span>
-    </div>
-    <div class="overflow-x-auto max-h-[520px] overflow-y-auto rounded-xl border border-gray-100">
-        <table class="w-full text-left border-collapse text-xs">
-            <thead class="sticky top-0 bg-white border-b border-gray-200 text-gray-400 shadow-sm z-10">
-                <tr>
-                    <th class="py-2.5 px-3 bg-white">Timestamp</th>
-                    <th class="py-2.5 px-3 bg-white">User / Role</th>
-                    <th class="py-2.5 px-3 bg-white">Action Type</th>
-                    <th class="py-2.5 px-3 bg-white">Details / Status</th>
-                </tr>
-            </thead>
-            <tbody id="auditTrailTable">
-                <tr><td colspan="4" class="text-center py-6 text-gray-400">Loading audit trail history...</td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+                        <div id="adminTabLogs" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-sm font-bold text-orbis-navy font-display">Live System Audit Trails (`audit_logs` Table)</h3>
+                                <span id="logCountBadge" class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">Loading...</span>
+                            </div>
+                            <div class="overflow-x-auto max-h-[520px] overflow-y-auto rounded-xl border border-gray-100">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead class="sticky top-0 bg-white border-b border-gray-200 text-gray-400 shadow-sm z-10">
+                                        <tr>
+                                            <th class="py-2.5 px-3 bg-white">Timestamp</th>
+                                            <th class="py-2.5 px-3 bg-white">User / Role</th>
+                                            <th class="py-2.5 px-3 bg-white">Action Type</th>
+                                            <th class="py-2.5 px-3 bg-white">Details / Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="auditTrailTable">
+                                        <tr><td colspan="4" class="text-center py-6 text-gray-400">Loading audit log trails...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </main>
                 </div>
             </div>
@@ -1136,7 +1147,7 @@
         </div>
     </div>
 
-    <!-- Core Engine -->
+    <!-- Engine Script -->
     <script>
         const SUPABASE_URL = "https://cirxzqobgixsdwexoksq.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnh6cW9iZ2l4c2R3ZXhva3NxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwMTM4MzcsImV4cCI6MjEwNzU4OTgzN30.TbCZX8DiVu9Recs4H8R6z63j12xl8U9L24qP67oL5xk";
@@ -1146,7 +1157,6 @@
         let failedAttempts = 0;
         let lockoutUntil = null;
 
-        // Staff & Customer Directory State
         let customersList = [
             { name: 'Rico Ramos', accountNo: '12554368', brgy: 'Brgy. Linao', status: 'Unpaid', mobile: '0917 123 4567', meterNo: 'MW-88213', balance: '405.00' },
             { name: 'Denise Santos', accountNo: '10432', brgy: 'Brgy. Cogon', status: 'Paid', mobile: '0917 xxx xxxx', meterNo: 'MW-88213', balance: '0.00' },
@@ -1155,9 +1165,8 @@
         ];
         let selectedCustomer = null;
         let activeCustomerFilter = 'All';
-        let pendingBillsQueue = []; // Step 1 & Step 2 Bill Queue
+        let pendingBillsQueue = [];
 
-        // Core Supabase REST API Fetch Helper
         async function dbFetch(table, options = {}) {
             const method = options.method || 'GET';
             const body = options.body ? JSON.stringify(options.body) : null;
@@ -1249,7 +1258,6 @@
             }
         }
 
-        // Dynamic Account Dropdown Population for Create Bill Modal
         async function populateBillAccountDropdown(selectedAccountNo = null) {
             const dropdown = document.getElementById('billAccountNum');
             if (!dropdown) return;
@@ -1313,25 +1321,7 @@
             icon.classList.toggle('fa-eye-slash');
         }
 
-        // Database Audit Logger
         async function addAuditRow(userId, role, action, details, color = 'blue') {
-            const userLabel = typeof userId === 'number' ? `User ID ${userId}` : userId;
-
-            const table = document.getElementById('auditTrailTable');
-            if (table) {
-                const now = new Date();
-                const timeStr = now.toISOString().slice(0, 16).replace('T', ' ');
-                const row = document.createElement('tr');
-                row.className = 'border-b border-gray-100';
-                row.innerHTML = `
-                    <td class="py-2.5 px-3">${timeStr}</td>
-                    <td class="py-2.5 px-3 font-semibold">${userLabel} (${role})</td>
-                    <td class="py-2.5 px-3"><span class="bg-${color}-100 text-${color}-700 px-2 py-0.5 rounded-full font-bold">${action}</span></td>
-                    <td class="py-2.5 px-3">${details}</td>
-                `;
-                table.insertBefore(row, table.firstChild);
-            }
-
             await dbFetch('audit_logs', {
                 method: 'POST',
                 body: {
@@ -1344,7 +1334,6 @@
             });
         }
 
-        // Payment Log Helper
         async function addPaymentLog(action, performedBy, details) {
             try {
                 await dbFetch('payment_logs', {
@@ -1360,7 +1349,6 @@
             }
         }
 
-        // --- STAFF CUSTOMER DIRECTORY & MANAGEMENT ---
         async function renderCustomersList() {
             const container = document.getElementById('customerListContainer');
             const query = document.getElementById('customerSearchInput').value.toLowerCase().trim();
@@ -1435,24 +1423,23 @@
         async function openCustomerProfile(accountNo) {
             let customer = customersList.find(c => c.accountNo === accountNo);
 
-            if (!customer) {
-                const dbUsers = await dbFetch('users', {
-                    method: 'GET',
-                    query: `water_account_number=eq.${encodeURIComponent(accountNo)}`
-                });
+            const dbUsers = await dbFetch('users', {
+                method: 'GET',
+                query: `water_account_number=eq.${encodeURIComponent(accountNo)}`
+            });
 
-                if (dbUsers && dbUsers.length > 0) {
-                    const u = dbUsers[0];
-                    customer = {
-                        name: u.full_name,
-                        accountNo: u.water_account_number,
-                        brgy: u.address || 'Ormoc City',
-                        status: 'Active',
-                        mobile: u.mobile_number || 'N/A',
-                        meterNo: 'MW-' + u.water_account_number.slice(-4),
-                        balance: '405.00'
-                    };
-                }
+            if (dbUsers && dbUsers.length > 0) {
+                const u = dbUsers[0];
+                customer = {
+                    name: u.full_name,
+                    accountNo: u.water_account_number,
+                    brgy: u.address || 'Ormoc City',
+                    status: 'Active',
+                    mobile: u.mobile_number || 'N/A',
+                    meterNo: 'MW-' + u.water_account_number.slice(-4),
+                    balance: '405.00',
+                    userId: u.user_id
+                };
             }
 
             if (!customer) return;
@@ -1476,15 +1463,115 @@
             }
         }
 
-        function flagForDisconnection() {
+        async function viewCustomerPayments() {
             if (!selectedCustomer) return;
-            selectedCustomer.status = 'Overdue';
-            addAuditRow('Faye Santos (Staff)', 'Meter Reader', 'Flagged Disconnection', `Flagged Customer Acct #${selectedCustomer.accountNo} for disconnection`, 'red');
-            showToast(`Customer #${selectedCustomer.accountNo} flagged for disconnection.`, 'error');
-            openCustomerProfile(selectedCustomer.accountNo);
+            openModal('customerPaymentsModal');
+            const container = document.getElementById('customerPaymentsContainer');
+            container.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">Loading payments...</p>';
+
+            let targetUserId = selectedCustomer.userId;
+            if (!targetUserId) {
+                const users = await dbFetch('users', {
+                    method: 'GET',
+                    query: `water_account_number=eq.${encodeURIComponent(selectedCustomer.accountNo)}`
+                });
+                if (users && users.length > 0) targetUserId = users[0].user_id;
+            }
+
+            if (targetUserId) {
+                const payments = await dbFetch('payments', {
+                    method: 'GET',
+                    query: `user_id=eq.${targetUserId}&order=payment_id.desc`
+                });
+
+                if (payments && payments.length > 0) {
+                    container.innerHTML = payments.map(p => `
+                        <div class="bg-gray-50 border p-3 rounded-xl flex justify-between items-center text-xs">
+                            <div>
+                                <p class="font-bold text-orbis-navy">${p.payment_method} (${p.reference_number})</p>
+                                <p class="text-[10px] text-gray-500">${p.created_at ? p.created_at.slice(0, 10) : 'Recent'}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-extrabold text-orbis-navy">₱${p.amount}</p>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === 'Verified' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${p.status}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                    return;
+                }
+            }
+
+            container.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">No payment history on record for this account.</p>';
         }
 
-        // --- STEP 1: STAFF CREATE NEW BILL / ADVANCE PAYMENT ---
+        async function flagForDisconnection() {
+            if (!selectedCustomer) return;
+
+            let targetUserId = selectedCustomer.userId;
+            if (!targetUserId) {
+                const users = await dbFetch('users', {
+                    method: 'GET',
+                    query: `water_account_number=eq.${encodeURIComponent(selectedCustomer.accountNo)}`
+                });
+                if (users && users.length > 0) targetUserId = users[0].user_id;
+            }
+
+            if (targetUserId) {
+                const bills = await dbFetch('bills', {
+                    method: 'GET',
+                    query: `user_id=eq.${targetUserId}&status=neq.Paid&order=created_at.desc&limit=1`
+                });
+
+                if (bills && bills.length > 0) {
+                    await dbFetch('bills', {
+                        method: 'PATCH',
+                        query: `bill_id=eq.${bills[0].bill_id}`,
+                        body: { status: 'Cut-Off Requested' }
+                    });
+                } else {
+                    await dbFetch('bills', {
+                        method: 'POST',
+                        body: {
+                            user_id: targetUserId,
+                            amount: parseFloat(selectedCustomer.balance) || 405.00,
+                            status: 'Cut-Off Requested',
+                            billing_period: 'October 2026',
+                            due_date: '2026-11-15'
+                        }
+                    });
+                }
+
+                await dbFetch('notifications', {
+                    method: 'POST',
+                    body: {
+                        user_id: targetUserId,
+                        message: `WARNING: Staff has flagged your account (#${selectedCustomer.accountNo}) for water supply disconnection due to overdue bills.`
+                    }
+                });
+            }
+
+            selectedCustomer.status = 'Overdue';
+            addAuditRow(currentUser ? currentUser.user_id : 'Staff', 'Meter Reader', 'Cut-Off Request Sent', `Flagged Customer Acct #${selectedCustomer.accountNo} for disconnection`, 'red');
+            showToast(`Customer #${selectedCustomer.accountNo} flagged for disconnection & sent to Admin!`, 'error');
+            openCustomerProfile(selectedCustomer.accountNo);
+        }
+        function formatDateString(dateStr) {
+    if (!dateStr) return 'N/A';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+
+    const monthNames = [
+        "January", "February", "March", "April", "May", "June", 
+        "July", "August", "September", "October", "November", "December"
+    ];
+
+    const month = monthNames[d.getMonth()];
+    const day = d.getDate();
+    const year = d.getFullYear();
+
+    return `${month} ${day}, ${year}`;
+}
+
         document.getElementById('createBillForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const acctSelect = document.getElementById('billAccountNum');
@@ -1511,7 +1598,6 @@
             showToast('Step 1 Complete: Bill generated & sent to Admin for approval!', 'success');
         });
 
-        // Toggle Admin Executive Navigation Tabs
         function switchAdminTab(tab) {
             const tApprovals = document.getElementById('adminTabApprovals');
             const tUsers = document.getElementById('adminTabUsers');
@@ -1537,9 +1623,7 @@
             }
         }
 
-        // Load Executive Admin Dashboard Data
         async function loadAdminData() {
-            // 1. Fetch Verified Payments for Total Revenue Stat
             const verifiedPayments = await dbFetch('payments', {
                 method: 'GET',
                 query: 'status=eq.Verified&select=amount'
@@ -1550,7 +1634,6 @@
             }
             document.getElementById('admStatRevenue').textContent = '₱' + totalRevenue.toFixed(2);
 
-            // 2. Fetch Users Directory
             const allUsers = await dbFetch('users', {
                 method: 'GET',
                 query: 'select=*&order=user_id.asc'
@@ -1578,7 +1661,6 @@
                 });
             }
 
-            // --- STEP 2: RENDER PENDING BILLS AWAITING ADMIN APPROVAL ---
             const billsTable = document.getElementById('adminPendingBillsTable');
             const billBadge = document.getElementById('approvalBillBadgeCount');
             if (billBadge) billBadge.textContent = `${pendingBillsQueue.length} Pending`;
@@ -1606,7 +1688,6 @@
                 billsTable.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">No new bills awaiting approval.</td></tr>';
             }
 
-            // 3. Fetch Endorsed Payments Awaiting Admin Approval
             const staffApprovedPayments = await dbFetch('payments', {
                 method: 'GET',
                 query: 'status=eq.Staff Verified&select=*'
@@ -1643,7 +1724,6 @@
                 paymentsTable.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">No staff-endorsed payments awaiting Admin approval.</td></tr>';
             }
 
-            // 4. Fetch Disconnection Cut-off Requests
             const cutoffBills = await dbFetch('bills', {
                 method: 'GET',
                 query: 'status=eq.Cut-Off Requested&select=*'
@@ -1675,25 +1755,22 @@
             }
         }
 
-        // --- STEP 3: ADMIN APPROVE & PUBLISH BILL TO RESIDENT (DYNAMIC USER LOOKUP) ---
         async function approveBillByAdmin(billId) {
             const index = pendingBillsQueue.findIndex(b => b.id === billId);
             if (index === -1) return;
 
             const approved = pendingBillsQueue.splice(index, 1)[0];
 
-            // Look up real user_id from Supabase matching the water_account_number
             const users = await dbFetch('users', {
                 method: 'GET',
                 query: `water_account_number=eq.${encodeURIComponent(approved.accountNum)}`
             });
 
-            let targetUserId = 2; // Fallback default
+            let targetUserId = 2;
             if (users && users.length > 0) {
                 targetUserId = users[0].user_id;
             }
 
-            // Save to Supabase bills table under targetUserId
             await dbFetch('bills', {
                 method: 'POST',
                 body: {
@@ -1719,7 +1796,6 @@
             showToast(`Step 3 Complete: Bill (₱${approved.amount}) approved & published to Account #${approved.accountNum}!`, 'success');
         }
 
-        // Admin Final Executive Approval for Payment (Upsert Bill & Settle to 0)
         async function adminApprovePayment(paymentId, userId, amount) {
             await dbFetch('payments', {
                 method: 'PATCH',
@@ -1758,7 +1834,6 @@
             loadAdminData();
         }
 
-        // Admin Reject Payment
         async function adminRejectPayment(paymentId, userId) {
             await dbFetch('payments', {
                 method: 'PATCH',
@@ -1773,7 +1848,6 @@
             loadAdminData();
         }
 
-        // Admin Authorize Water Cut-Off
         async function adminApproveCutoff(billId, userId) {
             await dbFetch('bills', {
                 method: 'PATCH',
@@ -1781,101 +1855,122 @@
                 body: { status: 'Cut-Off' }
             });
 
+            await dbFetch('notifications', {
+                method: 'POST',
+                body: {
+                    user_id: userId,
+                    message: 'URGENT: Your water service has been DISCONNECTED due to unpaid bills. Please pay your outstanding balance to request reconnection.'
+                }
+            });
+
             addPaymentLog('Water Cut-Off Authorized', 'System Admin', `Execution: Disconnected water supply for User ID ${userId}`);
             addAuditRow('admin_ormoc', 'Admin', 'Cut-Off Executed', `Authorized water supply disconnection for User ID ${userId}`, 'red');
-            showToast(`Water service cut-off executed for User ID ${userId}.`, 'error');
+            showToast(`Water service cut-off authorized & notice issued to User ID ${userId}.`, 'error');
 
             loadAdminData();
         }
 
-        // Load Consumer Bill and Reset Unpaid/Paid Balance States
         async function loadUserBill(userId) {
-            const bills = await dbFetch('bills', {
-                method: 'GET',
-                query: `user_id=eq.${userId}&order=created_at.desc&limit=1`
-            });
+    const bills = await dbFetch('bills', {
+        method: 'GET',
+        query: `user_id=eq.${userId}&order=created_at.desc&limit=1`
+    });
 
-            const statusBadge = document.getElementById('cBillStatus');
-            const cardBtn = document.getElementById('payBillCardBtn');
-            const viewBtn = document.getElementById('payBillViewBtn');
+    const statusBadge = document.getElementById('cBillStatus');
+    const cardBtn = document.getElementById('payBillCardBtn');
+    const viewBtn = document.getElementById('payBillViewBtn');
 
-            if (bills && bills.length > 0) {
-                activeUserBill = bills[0];
-                const isPaid = activeUserBill.status === 'Paid';
-                const billAmt = isPaid ? 0 : (parseFloat(activeUserBill.amount) || 0.00);
-                const amtFormatted = "₱" + billAmt.toFixed(2);
+    if (bills && bills.length > 0) {
+        activeUserBill = bills[0];
+        const isPaid = activeUserBill.status === 'Paid';
+        const billAmt = isPaid ? 0 : (parseFloat(activeUserBill.amount) || 0.00);
+        const amtFormatted = "₱" + billAmt.toFixed(2);
 
-                document.getElementById('cBalance').textContent = amtFormatted;
-                document.getElementById('bAmount').textContent = amtFormatted;
-                document.getElementById('payAmount').textContent = amtFormatted;
-                document.getElementById('confAmount').textContent = amtFormatted;
+        document.getElementById('cBalance').textContent = amtFormatted;
+        document.getElementById('bAmount').textContent = amtFormatted;
+        document.getElementById('payAmount').textContent = amtFormatted;
+        document.getElementById('confAmount').textContent = amtFormatted;
 
-                if (activeUserBill.billing_period) {
-                    const periodEl = document.getElementById('cPeriodLabel');
-                    if (periodEl) periodEl.textContent = `Period: ${activeUserBill.billing_period}`;
-                    const bBadge = document.getElementById('bPeriodBadge');
-                    if (bBadge) bBadge.textContent = `Period: ${activeUserBill.billing_period}`;
-                    const bText = document.getElementById('bPeriodText');
-                    if (bText) bText.textContent = activeUserBill.billing_period;
-                }
-                if (activeUserBill.due_date) {
-                    const dueEl = document.getElementById('cDueDate');
-                    if (dueEl) dueEl.textContent = activeUserBill.due_date;
-                }
-
-                if (isPaid) {
-                    statusBadge.textContent = 'Paid';
-                    statusBadge.className = 'bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full';
-                    if (cardBtn) {
-                        cardBtn.textContent = 'Bill Settled (Paid)';
-                        cardBtn.disabled = true;
-                        cardBtn.className = 'mt-4 w-full bg-green-500/20 text-green-300 font-bold py-2.5 rounded-xl text-sm cursor-not-allowed';
-                    }
-                    if (viewBtn) {
-                        viewBtn.textContent = 'Bill Settled';
-                        viewBtn.disabled = true;
-                        viewBtn.className = 'w-full bg-gray-400 text-white font-bold py-3.5 rounded-xl shadow-lg cursor-not-allowed';
-                    }
-                } else {
-                    statusBadge.textContent = activeUserBill.status || 'Unpaid';
-                    if (activeUserBill.status === 'Disconnection Warning' || activeUserBill.status === 'Cut-Off' || activeUserBill.status === 'Cut-Off Requested') {
-                        statusBadge.className = 'bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse';
-                    } else {
-                        statusBadge.className = 'bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full';
-                    }
-                    if (cardBtn) {
-                        cardBtn.textContent = 'Pay Bill Now';
-                        cardBtn.disabled = false;
-                        cardBtn.className = 'mt-4 w-full bg-white text-orbis-navy font-bold py-2.5 rounded-xl active:scale-95 transition-transform text-sm';
-                    }
-                    if (viewBtn) {
-                        viewBtn.textContent = 'Pay Bill Now';
-                        viewBtn.disabled = false;
-                        viewBtn.className = 'w-full bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform';
-                    }
-                }
-            } else {
-                activeUserBill = null;
-                document.getElementById('cBalance').textContent = "₱0.00";
-                document.getElementById('bAmount').textContent = "₱0.00";
-                document.getElementById('payAmount').textContent = "₱0.00";
-                document.getElementById('confAmount').textContent = "₱0.00";
-                statusBadge.textContent = "No Bill Due";
-                statusBadge.className = "bg-gray-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full";
-                if (cardBtn) {
-                    cardBtn.textContent = 'No Bill Due';
-                    cardBtn.disabled = true;
-                    cardBtn.className = 'mt-4 w-full bg-white/20 text-white/50 font-bold py-2.5 rounded-xl text-sm cursor-not-allowed';
-                }
-                if (viewBtn) {
-                    viewBtn.textContent = 'No Bill Due';
-                    viewBtn.disabled = true;
-                    viewBtn.className = 'w-full bg-gray-400 text-white font-bold py-3.5 rounded-xl shadow-lg cursor-not-allowed';
-                }
-            }
+        if (activeUserBill.billing_period) {
+            const periodEl = document.getElementById('cPeriodLabel');
+            if (periodEl) periodEl.textContent = `Period: ${activeUserBill.billing_period}`;
+            const bBadge = document.getElementById('bPeriodBadge');
+            if (bBadge) bBadge.textContent = `Period: ${activeUserBill.billing_period}`;
+            const bText = document.getElementById('bPeriodText');
+            if (bText) bText.textContent = activeUserBill.billing_period;
         }
 
-        // Resident Login Handler
+        // Formats ISO string (2027-01-15T00:00:00+00:00) -> "January 15, 2027"
+        if (activeUserBill.due_date) {
+            const dueEl = document.getElementById('cDueDate');
+            if (dueEl) dueEl.textContent = formatDateString(activeUserBill.due_date);
+        }
+
+        if (isPaid) {
+            statusBadge.textContent = 'Paid';
+            statusBadge.className = 'bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full';
+            if (cardBtn) {
+                cardBtn.textContent = 'Bill Settled (Paid)';
+                cardBtn.disabled = true;
+                cardBtn.className = 'mt-4 w-full bg-green-500/20 text-green-300 font-bold py-2.5 rounded-xl text-sm cursor-not-allowed';
+            }
+            if (viewBtn) {
+                viewBtn.textContent = 'Bill Settled';
+                viewBtn.disabled = true;
+                viewBtn.className = 'w-full bg-gray-400 text-white font-bold py-3.5 rounded-xl shadow-lg cursor-not-allowed';
+            }
+        } else if (activeUserBill.status === 'Cut-Off') {
+            statusBadge.textContent = 'DISCONNECTED';
+            statusBadge.className = 'bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse';
+            if (cardBtn) {
+                cardBtn.textContent = 'Pay Now to Reconnect';
+                cardBtn.disabled = false;
+                cardBtn.className = 'mt-4 w-full bg-red-600 text-white font-bold py-2.5 rounded-xl active:scale-95 transition-transform text-sm shadow-lg';
+            }
+            if (viewBtn) {
+                viewBtn.textContent = 'Pay Now to Reconnect';
+                viewBtn.disabled = false;
+                viewBtn.className = 'w-full bg-red-600 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform';
+            }
+        } else {
+            statusBadge.textContent = activeUserBill.status || 'Unpaid';
+            if (activeUserBill.status === 'Disconnection Warning' || activeUserBill.status === 'Cut-Off Requested') {
+                statusBadge.className = 'bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse';
+            } else {
+                statusBadge.className = 'bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full';
+            }
+            if (cardBtn) {
+                cardBtn.textContent = 'Pay Bill Now';
+                cardBtn.disabled = false;
+                cardBtn.className = 'mt-4 w-full bg-white text-orbis-navy font-bold py-2.5 rounded-xl active:scale-95 transition-transform text-sm';
+            }
+            if (viewBtn) {
+                viewBtn.textContent = 'Pay Bill Now';
+                viewBtn.disabled = false;
+                viewBtn.className = 'w-full bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform';
+            }
+        }
+    } else {
+        activeUserBill = null;
+        document.getElementById('cBalance').textContent = "₱0.00";
+        document.getElementById('bAmount').textContent = "₱0.00";
+        document.getElementById('payAmount').textContent = "₱0.00";
+        document.getElementById('confAmount').textContent = "₱0.00";
+        statusBadge.textContent = "No Bill Due";
+        statusBadge.className = "bg-gray-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full";
+        if (cardBtn) {
+            cardBtn.textContent = 'No Bill Due';
+            cardBtn.disabled = true;
+            cardBtn.className = 'mt-4 w-full bg-white/20 text-white/50 font-bold py-2.5 rounded-xl text-sm cursor-not-allowed';
+        }
+        if (viewBtn) {
+            viewBtn.textContent = 'No Bill Due';
+            viewBtn.disabled = true;
+            viewBtn.className = 'w-full bg-gray-400 text-white font-bold py-3.5 rounded-xl shadow-lg cursor-not-allowed';
+        }
+    }
+}
+
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const account = document.getElementById('loginUser').value.trim();
@@ -1928,7 +2023,6 @@
             }
         }
 
-        // OTP Request
         document.getElementById('otpForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const acct = document.getElementById('otpAccount').value.trim();
@@ -1969,7 +2063,6 @@
             addAuditRow(targetUserId, 'Resident', 'OTP Requested', `Generated OTP ${generatedOtp} stored in DB`, 'blue');
         });
 
-        // OTP Verification
         document.getElementById('otpVerifyForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const otp = document.getElementById('otpInput').value.trim();
@@ -2005,7 +2098,6 @@
             addAuditRow(acct, 'Resident', 'Password Reset', 'Password reset verified & updated in DB', 'green');
         });
 
-        // Auto-seed initial bill row for Consumer during registration
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const role = document.getElementById('regRole').value;
@@ -2090,7 +2182,6 @@
             }
         });
 
-        // Authenticated Staff Login Handler
         document.getElementById('staffLoginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const id = document.getElementById('staffId').value.trim();
@@ -2130,7 +2221,6 @@
             }
         });
 
-        // Dynamic Admin Login Handler
         document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const user = document.getElementById('adminUser').value.trim();
@@ -2161,7 +2251,6 @@
             switchView('payBillView');
         }
 
-        // Resident Payment Submission
         async function startPayment() {
             const refNo = "TXN-" + Math.floor(100000000 + Math.random() * 900000000);
             const userId = currentUser ? currentUser.user_id : 2;
@@ -2191,7 +2280,6 @@
             addAuditRow(userId, 'Resident', 'Payment Submitted', `Paid ₱${payAmt} via GCash (${refNo})`, 'blue');
         }
 
-        // Toggle Staff Management Tabs
         function switchStaffTab(tab) {
             const tabPayments = document.getElementById('staffPaymentsTab');
             const tabUnpaid = document.getElementById('staffUnpaidTab');
@@ -2211,7 +2299,6 @@
             }
         }
 
-        // Load Staff Portal Queues
         async function loadStaffData() {
             const payments = await dbFetch('payments', {
                 method: 'GET',
@@ -2263,13 +2350,13 @@
                 unpaidQueue.innerHTML = '';
                 unpaidBills.forEach(b => {
                     const card = document.createElement('div');
-                    card.className = 'bg-white rounded-2xl p-4 shadow-sm mb-3 border-l-4 ' + (b.status === 'Disconnection Warning' || b.status === 'Cut-Off Requested' ? 'border-red-500' : 'border-amber-400');
+                    card.className = 'bg-white rounded-2xl p-4 shadow-sm mb-3 border-l-4 ' + (b.status === 'Disconnection Warning' || b.status === 'Cut-Off Requested' || b.status === 'Cut-Off' ? 'border-red-500' : 'border-amber-400');
                     card.innerHTML = `
                         <div class="flex justify-between items-start mb-1">
                             <div>
                                 <p class="text-orbis-navy font-bold text-sm font-display">User ID: ${b.user_id}</p>
                             </div>
-                            <span class="text-xs font-bold px-2 py-0.5 rounded-full ${b.status === 'Disconnection Warning' || b.status === 'Cut-Off Requested' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}">${b.status}</span>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded-full ${b.status === 'Disconnection Warning' || b.status === 'Cut-Off Requested' || b.status === 'Cut-Off' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}">${b.status}</span>
                         </div>
                         <div class="flex gap-2 mt-2">
                             <button onclick="issueCutoffWarning(${b.bill_id}, ${b.user_id}, 'warning')" class="flex-1 py-2 rounded-lg bg-amber-500 text-white text-[11px] font-bold">
@@ -2288,7 +2375,6 @@
             }
         }
 
-        // Staff Endorses Payment to Admin
         async function verifyPaymentAction(paymentId, userId, action) {
             const staffName = currentUser ? currentUser.full_name : 'Staff';
             const staffId = currentUser ? currentUser.user_id : 'STF-2201';
@@ -2318,7 +2404,6 @@
             loadStaffData();
         }
 
-        // Staff Sends Disconnection Request to Admin
         async function issueCutoffWarning(billId, userId, actionType) {
             const staffName = currentUser ? currentUser.full_name : 'Staff';
             const staffId = currentUser ? currentUser.user_id : 'STF-2201';
@@ -2328,6 +2413,14 @@
                     method: 'PATCH',
                     query: `bill_id=eq.${billId}`,
                     body: { status: 'Disconnection Warning' }
+                });
+
+                await dbFetch('notifications', {
+                    method: 'POST',
+                    body: {
+                        user_id: userId,
+                        message: 'WARNING: Your water bill is overdue. Please settle your account to prevent service disconnection.'
+                    }
                 });
 
                 addPaymentLog('Warning Notice', staffName, `Issued disconnection warning for User ID ${userId}`);
@@ -2340,6 +2433,14 @@
                     body: { status: 'Cut-Off Requested' }
                 });
 
+                await dbFetch('notifications', {
+                    method: 'POST',
+                    body: {
+                        user_id: userId,
+                        message: 'NOTICE: Staff has recommended your water service for cut-off due to non-payment.'
+                    }
+                });
+
                 addPaymentLog('Cut-Off Requested', staffName, `Requested Admin authorization to cut off water for User ID ${userId}`);
                 showToast(`Cut-off request forwarded to Admin for authorization.`, 'error');
                 addAuditRow(staffId, 'Meter Reader', 'Cut-Off Request Sent', `Requested Admin cut-off authorization for User ${userId}`, 'red');
@@ -2348,7 +2449,6 @@
             loadStaffData();
         }
 
-        // Load Consumer Notifications
         async function loadUserNotifications() {
             const list = document.getElementById('notificationsList');
             if (!currentUser) {
@@ -2358,16 +2458,18 @@
 
             const notes = await dbFetch('notifications', {
                 method: 'GET',
-                query: `user_id=eq.${currentUser.user_id}`
+                query: `user_id=eq.${currentUser.user_id}&order=created_at.desc`
             });
 
             if (notes && Array.isArray(notes) && notes.length > 0) {
                 list.innerHTML = '';
                 notes.forEach(n => {
                     const card = document.createElement('div');
-                    card.className = 'bg-white rounded-2xl p-4 shadow-sm border-l-4 border-orbis-navy';
+                    const isWarning = n.message.includes('DISCONNECTED') || n.message.includes('WARNING') || n.message.includes('NOTICE');
+                    card.className = 'bg-white rounded-2xl p-4 shadow-sm border-l-4 ' + (isWarning ? 'border-red-500' : 'border-orbis-navy');
                     card.innerHTML = `
-                        <p class="text-xs text-gray-600 leading-relaxed">${n.message || 'System Notification'}</p>
+                        <p class="text-xs text-gray-700 font-medium leading-relaxed">${n.message || 'System Notification'}</p>
+                        <p class="text-[10px] text-gray-400 mt-2">${n.created_at ? n.created_at.slice(0, 16).replace('T', ' ') : 'Recent'}</p>
                     `;
                     list.appendChild(card);
                 });
@@ -2376,7 +2478,6 @@
             }
         }
 
-        // Load Consumer Payment History
         async function loadUserPayments() {
             const list = document.getElementById('historyList');
             if (!currentUser) {
@@ -2412,65 +2513,63 @@
         }
 
         async function loadAuditLogs() {
-    // Query audit_logs without restrictive limits to fetch all database records
-    const logs = await dbFetch('audit_logs', {
-        method: 'GET',
-        query: 'select=*&order=created_at.desc'
-    });
+            const logs = await dbFetch('audit_logs', {
+                method: 'GET',
+                query: 'select=*&order=created_at.desc'
+            });
 
-    const table = document.getElementById('auditTrailTable');
-    const badge = document.getElementById('logCountBadge');
-    if (!table) return;
+            const table = document.getElementById('auditTrailTable');
+            const badge = document.getElementById('logCountBadge');
+            if (!table) return;
 
-    if (logs && Array.isArray(logs) && logs.length > 0) {
-        if (badge) badge.textContent = `${logs.length} Total Records`;
-        table.innerHTML = '';
-        
-        logs.forEach(log => {
-            let timeStr = 'Just now';
-            if (log.created_at) {
-                const d = new Date(log.created_at);
-                const yr = d.getFullYear();
-                const mo = String(d.getMonth() + 1).padStart(2, '0');
-                const da = String(d.getDate()).padStart(2, '0');
-                const hr = String(d.getHours()).padStart(2, '0');
-                const mi = String(d.getMinutes()).padStart(2, '0');
-                timeStr = `${yr}-${mo}-${da} ${hr}:${mi}`;
+            if (logs && Array.isArray(logs) && logs.length > 0) {
+                if (badge) badge.textContent = `${logs.length} Total Records`;
+                table.innerHTML = '';
+                
+                logs.forEach(log => {
+                    let timeStr = 'Just now';
+                    if (log.created_at) {
+                        const d = new Date(log.created_at);
+                        const yr = d.getFullYear();
+                        const mo = String(d.getMonth() + 1).padStart(2, '0');
+                        const da = String(d.getDate()).padStart(2, '0');
+                        const hr = String(d.getHours()).padStart(2, '0');
+                        const mi = String(d.getMinutes()).padStart(2, '0');
+                        timeStr = `${yr}-${mo}-${da} ${hr}:${mi}`;
+                    }
+
+                    const act = log.action || '';
+                    let badgeClass = 'bg-blue-100 text-blue-700';
+                    if (act.includes('Login') || act.includes('Approved') || act.includes('Verified')) {
+                        badgeClass = 'bg-blue-100 text-blue-700';
+                        if (act.includes('Admin Login')) badgeClass = 'bg-indigo-100 text-indigo-700';
+                    } else if (act.includes('Logout')) {
+                        badgeClass = 'bg-gray-100 text-gray-700';
+                    } else if (act.includes('Cut-Off') || act.includes('Reject') || act.includes('Warning')) {
+                        badgeClass = 'bg-red-100 text-red-700';
+                    } else if (act.includes('Registration') || act.includes('Initialization')) {
+                        badgeClass = 'bg-green-100 text-green-700';
+                    }
+
+                    const userRole = log.user_role ? ` (${log.user_role})` : '';
+                    const userIdDisplay = log.user_id ? `User ID ${log.user_id}${userRole}` : `System`;
+
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-100 hover:bg-gray-50/50 transition-colors';
+                    row.innerHTML = `
+                        <td class="py-2.5 px-3 whitespace-nowrap text-gray-500 font-mono text-[11px]">${timeStr}</td>
+                        <td class="py-2.5 px-3 font-semibold text-orbis-navy whitespace-nowrap">${userIdDisplay}</td>
+                        <td class="py-2.5 px-3 whitespace-nowrap"><span class="${badgeClass} px-2 py-0.5 rounded-full font-bold text-[10px]">${act}</span></td>
+                        <td class="py-2.5 px-3 text-gray-600">${log.details || ''}</td>
+                    `;
+                    table.appendChild(row);
+                });
+            } else {
+                if (badge) badge.textContent = '0 Records';
+                table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-400">No audit logs found in database.</td></tr>';
             }
+        }
 
-            const act = log.action || '';
-            let badgeClass = 'bg-blue-100 text-blue-700';
-            if (act.includes('Login') || act.includes('Approved') || act.includes('Verified')) {
-                badgeClass = 'bg-blue-100 text-blue-700';
-                if (act.includes('Admin Login')) badgeClass = 'bg-indigo-100 text-indigo-700';
-            } else if (act.includes('Logout')) {
-                badgeClass = 'bg-gray-100 text-gray-700';
-            } else if (act.includes('Cut-Off') || act.includes('Reject') || act.includes('Warning')) {
-                badgeClass = 'bg-red-100 text-red-700';
-            } else if (act.includes('Registration') || act.includes('Initialization')) {
-                badgeClass = 'bg-green-100 text-green-700';
-            }
-
-            const userRole = log.user_role ? ` (${log.user_role})` : '';
-            const userIdDisplay = log.user_id ? `User ID ${log.user_id}${userRole}` : `System`;
-
-            const row = document.createElement('tr');
-            row.className = 'border-b border-gray-100 hover:bg-gray-50/50 transition-colors';
-            row.innerHTML = `
-                <td class="py-2.5 px-3 whitespace-nowrap text-gray-500 font-mono text-[11px]">${timeStr}</td>
-                <td class="py-2.5 px-3 font-semibold text-orbis-navy whitespace-nowrap">${userIdDisplay}</td>
-                <td class="py-2.5 px-3 whitespace-nowrap"><span class="${badgeClass} px-2 py-0.5 rounded-full font-bold text-[10px]">${act}</span></td>
-                <td class="py-2.5 px-3 text-gray-600">${log.details || ''}</td>
-            `;
-            table.appendChild(row);
-        });
-    } else {
-        if (badge) badge.textContent = '0 Records';
-        table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-400">No audit logs found in database.</td></tr>';
-    }
-}
-
-        // Clock
         setInterval(() => {
             const now = new Date();
             let h = now.getHours() % 12 || 12;
