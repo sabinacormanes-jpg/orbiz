@@ -1199,6 +1199,16 @@
             }
         }
 
+        // Gets all residents and returns a map: user_id -> full name
+        async function getUserNameMap() {
+            const users = await dbFetch('users', { method: 'GET', query: 'select=user_id,full_name' });
+            const map = {};
+            if (users && Array.isArray(users)) {
+                users.forEach(u => { map[u.user_id] = u.full_name; });
+            }
+            return map;
+        }
+
         function fillDemo(acct, pass) {
             document.getElementById('loginUser').value = acct;
             document.getElementById('loginPass').value = pass;
@@ -1639,6 +1649,8 @@
                 method: 'GET',
                 query: 'select=*&order=user_id.asc'
             });
+            const adminNameMap = {};
+            if (allUsers && Array.isArray(allUsers)) allUsers.forEach(u => { adminNameMap[u.user_id] = u.full_name; });
             const usersTable = document.getElementById('adminUsersTable');
             if (allUsers && Array.isArray(allUsers) && allUsers.length > 0) {
     document.getElementById('admStatUsers').textContent = allUsers.length;
@@ -1710,7 +1722,7 @@
                     row.className = 'border-b border-gray-100';
                     row.innerHTML = `
                         <td class="py-3 px-3 font-mono">PAY-${p.payment_id}</td>
-                        <td class="py-3 px-3 font-bold">User ${p.user_id}</td>
+                        <td class="py-3 px-3 font-bold">${adminNameMap[p.user_id] || 'User ' + p.user_id}</td>
                         <td class="py-3 px-3 font-extrabold text-orbis-navy">₱${parseFloat(p.amount).toFixed(2)}</td>
                         <td class="py-3 px-3">${p.payment_method} (${p.reference_number})</td>
                         <td class="py-3 px-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Endorsed by Staff</span></td>
@@ -1745,7 +1757,7 @@
                     row.className = 'border-b border-gray-100';
                     row.innerHTML = `
                         <td class="py-3 px-3 font-mono">BILL-${b.bill_id}</td>
-                        <td class="py-3 px-3 font-bold">User ${b.user_id}</td>
+                        <td class="py-3 px-3 font-bold">${adminNameMap[b.user_id] || 'User ' + b.user_id}</td>
                         <td class="py-3 px-3 font-extrabold text-red-600">₱${parseFloat(b.amount).toFixed(2)}</td>
                         <td class="py-3 px-3"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">Recommended for Cut-Off</span></td>
                         <td class="py-3 px-3 text-right">
@@ -2356,6 +2368,7 @@ function handleFailedAttempt(account, roleLabel = 'User') {
                 query: 'status=eq.Pending&select=*'
             });
 
+            const nameMap = await getUserNameMap();
             const queue = document.getElementById('staffQueue');
             const statPending = document.getElementById('statPending');
 
@@ -2368,7 +2381,7 @@ function handleFailedAttempt(account, roleLabel = 'User') {
                     card.innerHTML = `
                         <div class="flex justify-between items-start mb-2">
                             <div>
-                                <p class="text-orbis-navy font-bold text-sm font-display">User ID: ${p.user_id}</p>
+                                <p class="text-orbis-navy font-bold text-sm font-display">${nameMap[p.user_id] || 'Resident #' + p.user_id}</p>
                                 <p class="text-gray-400 text-[11px]">Ref: ${p.reference_number}</p>
                             </div>
                             <p class="text-orbis-navy font-bold text-sm">₱${p.amount}</p>
@@ -2405,7 +2418,7 @@ function handleFailedAttempt(account, roleLabel = 'User') {
                     card.innerHTML = `
                         <div class="flex justify-between items-start mb-1">
                             <div>
-                                <p class="text-orbis-navy font-bold text-sm font-display">User ID: ${b.user_id}</p>
+                                <p class="text-orbis-navy font-bold text-sm font-display">${nameMap[b.user_id] || 'Resident #' + b.user_id}</p>
                             </div>
                             <span class="text-xs font-bold px-2 py-0.5 rounded-full ${b.status === 'Disconnection Warning' || b.status === 'Cut-Off Requested' || b.status === 'Cut-Off' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}">${b.status}</span>
                         </div>
