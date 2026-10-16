@@ -1949,15 +1949,16 @@
                 body: { status: 'Verified' }
             });
 
+            // only the newest bill (the one the resident paid) becomes Paid
             const existingBills = await dbFetch('bills', {
                 method: 'GET',
-                query: `user_id=eq.${userId}`
+                query: `user_id=eq.${userId}&order=created_at.desc&limit=1`
             });
 
             if (existingBills && existingBills.length > 0) {
                 await dbFetch('bills', {
                     method: 'PATCH',
-                    query: `user_id=eq.${userId}`,
+                    query: `bill_id=eq.${existingBills[0].bill_id}`,
                     body: { status: 'Paid', amount: 0 }
                 });
             } else {
@@ -2422,6 +2423,17 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
         }
 
         async function startPayment() {
+            const payerId = currentUser ? currentUser.user_id : 2;
+
+            // stop double payments: one payment at a time while the first is still being checked
+            const openPayments = await dbFetch('payments', {
+                method: 'GET',
+                query: `user_id=eq.${payerId}&status=in.(Pending,Staff Verified)&select=payment_id`
+            });
+            if (openPayments && openPayments.length > 0) {
+                return showToast('You already have a payment waiting for approval. Please wait for it to finish.', 'error');
+            }
+
             const refNo = "TXN-" + Math.floor(100000000 + Math.random() * 900000000);
             const userId = currentUser ? currentUser.user_id : 2;
             const payAmt = activeUserBill ? activeUserBill.amount : 405.00;
