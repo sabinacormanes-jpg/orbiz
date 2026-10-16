@@ -1123,7 +1123,13 @@
                         <div id="adminTabLogs" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="text-sm font-bold text-orbis-navy font-display">Live System Audit Trails (`audit_logs` Table)</h3>
-                                <span id="logCountBadge" class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">Loading...</span>
+                                <div class="flex items-center gap-2">
+                                    <span id="logCountBadge" class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">Loading...</span>
+                                    <button onclick="refreshAuditLogs()" class="bg-orbis-navy text-white text-xs font-bold px-3 py-1 rounded-full active:scale-95 transition-transform">
+                                        <i class="fa-solid fa-rotate-right mr-1"></i>Refresh
+                                    </button>
+                                    <button onclick="showAllAuditLogs()" class="bg-gray-100 text-orbis-navy text-xs font-bold px-3 py-1 rounded-full active:scale-95 transition-transform">Show All</button>
+                                </div>
                             </div>
                             <div class="overflow-x-auto max-h-[520px] overflow-y-auto rounded-xl border border-gray-100">
                                 <table class="w-full text-left border-collapse text-xs">
@@ -1332,17 +1338,38 @@
             icon.classList.toggle('fa-eye-slash');
         }
 
+        // Makes role names look the same everywhere (MeterReader -> Meter Reader, Consumer -> Resident)
+        function normalizeRole(role) {
+            if (role === 'MeterReader') return 'Meter Reader';
+            if (role === 'Consumer') return 'Resident';
+            return role || 'Resident';
+        }
+
         async function addAuditRow(userId, role, action, details, color = 'blue') {
-            await dbFetch('audit_logs', {
-                method: 'POST',
-                body: {
-                    user_id: typeof userId === 'number' ? userId : 2,
-                    user_role: role,
-                    action: action,
-                    details: details,
-                    ip_address: '127.0.0.1'
-                }
-            });
+            // 1) use the id given if it is a number
+            // 2) if not, use the real user who is logged in right now
+            // 3) if nobody is logged in (example: wrong password), save it as unknown (null)
+            let realId = null;
+            if (typeof userId === 'number') {
+                realId = userId;
+            } else if (currentUser && typeof currentUser.user_id === 'number') {
+                realId = currentUser.user_id;
+            }
+
+            const body = {
+                user_id: realId,
+                user_role: normalizeRole(role),
+                action: action,
+                details: details,
+                ip_address: '127.0.0.1'
+            };
+
+            let result = await dbFetch('audit_logs', { method: 'POST', body });
+            // if the database does not accept an empty user, save it with the fallback id so the log is not lost
+            if (result === null && realId === null) {
+                body.user_id = 2;
+                await dbFetch('audit_logs', { method: 'POST', body });
+            }
         }
 
         async function addPaymentLog(action, performedBy, details) {
@@ -1603,7 +1630,7 @@
             };
 
             pendingBillsQueue.push(newBill);
-            addAuditRow('Faye Santos (Staff)', 'Meter Reader', 'Created New Bill', `Account ${newBill.accountNum} - ₱${newBill.amount} (${newBill.period})`, 'blue');
+            addAuditRow(currentUser ? currentUser.user_id : 'Staff', 'Meter Reader', 'Created New Bill', `Account ${newBill.accountNum} - ₱${newBill.amount} (${newBill.period})`, 'blue');
             
             closeModal('createBillModal');
             showToast('Step 1 Complete: Bill generated & sent to Admin for approval!', 'success');
@@ -2040,16 +2067,26 @@
     return false;
 }
 
-function handleFailedAttempt(account, roleLabel = 'User') {
+async function handleFailedAttempt(account, roleLabel = 'Resident') {
     failedAttempts++;
+
+    // look for the real owner of this account so the log shows the correct user
+    let ownerId = null;
+    const found = await dbFetch('users', {
+        method: 'GET',
+        query: `water_account_number=eq.${encodeURIComponent(account)}&select=user_id`
+    });
+    if (found && found.length > 0) ownerId = found[0].user_id;
+    const ownerNote = ownerId ? `account ${account}` : `unknown account "${account}"`;
+
     if (failedAttempts >= 3) {
         lockoutUntil = new Date(Date.now() + 5 * 60 * 1000); // 5 minute lockout
         showToast('3 failed attempts. Account locked for 5 minutes!', 'error');
-        addAuditRow(account, roleLabel, 'Lockout Triggered', `3 failed login attempts recorded for ${account}`, 'red');
+        addAuditRow(ownerId, roleLabel, 'Lockout Triggered', `3 failed login attempts recorded for ${ownerNote}`, 'red');
     } else {
         const remaining = 3 - failedAttempts;
         showToast(`Invalid credentials. ${remaining} attempt(s) remaining before lockout.`, 'error');
-        addAuditRow(account, roleLabel, 'Failed Login Attempt', `Failed login attempt (${failedAttempts}/3) for ${account}`, 'red');
+        addAuditRow(ownerId, roleLabel, 'Failed Login Attempt', `Failed login attempt (${failedAttempts}/3) for ${ownerNote}`, 'red');
     }
 }
 
@@ -2576,11 +2613,38 @@ function handleFailedAttempt(account, roleLabel = 'User') {
             }
         }
 
+        // ---- Refresh button for the audit trail (does NOT delete anything in the database) ----
+        const AUDIT_CUTOFF_KEY = 'orbisAuditCutoff';
+        function getAuditCutoff() {
+            try { return localStorage.getItem(AUDIT_CUTOFF_KEY) || null; } catch (e) { return null; }
+        }
+        function setAuditCutoff(value) {
+            try {
+                if (value) localStorage.setItem(AUDIT_CUTOFF_KEY, value);
+                else localStorage.removeItem(AUDIT_CUTOFF_KEY);
+            } catch (e) {}
+        }
+        async function refreshAuditLogs() {
+            // use the newest log's time as the starting line, so only NEW records are counted after this
+            const latest = await dbFetch('audit_logs', { method: 'GET', query: 'select=created_at&order=created_at.desc&limit=1' });
+            const cutoff = (latest && latest.length > 0) ? latest[0].created_at : new Date().toISOString();
+            setAuditCutoff(cutoff);
+            await loadAuditLogs();
+            showToast('Audit trail refreshed. Record count reset to 0.', 'success');
+        }
+        async function showAllAuditLogs() {
+            setAuditCutoff(null);
+            await loadAuditLogs();
+            showToast('Showing all audit records.', 'info');
+        }
+
         async function loadAuditLogs() {
-            const logs = await dbFetch('audit_logs', {
-                method: 'GET',
-                query: 'select=*&order=created_at.desc'
-            });
+            let auditQuery = 'select=*&order=created_at.desc';
+            const cutoff = getAuditCutoff();
+            if (cutoff) auditQuery += `&created_at=gt.${encodeURIComponent(cutoff)}`;
+
+            const logs = await dbFetch('audit_logs', { method: 'GET', query: auditQuery });
+            const nameMap = await getUserNameMap();
 
             const table = document.getElementById('auditTrailTable');
             const badge = document.getElementById('logCountBadge');
@@ -2615,8 +2679,15 @@ function handleFailedAttempt(account, roleLabel = 'User') {
                         badgeClass = 'bg-green-100 text-green-700';
                     }
 
-                    const userRole = log.user_role ? ` (${log.user_role})` : '';
-                    const userIdDisplay = log.user_id ? `User ID ${log.user_id}${userRole}` : `System`;
+                    const userRole = ` (${normalizeRole(log.user_role)})`;
+                    let userIdDisplay;
+                    if (log.user_id && nameMap[log.user_id]) {
+                        userIdDisplay = `${nameMap[log.user_id]}${userRole}`;
+                    } else if (log.user_id) {
+                        userIdDisplay = `User ID ${log.user_id}${userRole}`;
+                    } else {
+                        userIdDisplay = `Unknown${userRole}`;
+                    }
 
                     const row = document.createElement('tr');
                     row.className = 'border-b border-gray-100 hover:bg-gray-50/50 transition-colors';
@@ -2630,7 +2701,8 @@ function handleFailedAttempt(account, roleLabel = 'User') {
                 });
             } else {
                 if (badge) badge.textContent = '0 Records';
-                table.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-400">No audit logs found in database.</td></tr>';
+                const emptyMsg = cutoff ? 'No new records since you pressed Refresh.' : 'No audit logs found in database.';
+                table.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-400">${emptyMsg}</td></tr>`;
             }
         }
 
