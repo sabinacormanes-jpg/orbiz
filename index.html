@@ -2013,7 +2013,7 @@
                 addPaymentLog('Duplicate Payment Cancelled', 'System Admin', `Cancelled ${duplicates.length} duplicate payment(s) of ${residentName} after BILL-${billId} was settled`);
                 addAuditRow('admin_ormoc', 'Admin', 'Duplicate Payment Cancelled', `Cancelled ${duplicates.length} duplicate payment(s) of ${residentName}`, 'blue');
             }
-            addAuditRow('admin_ormoc', 'Admin', 'Approval Complete', `Executive sign-off given for payment PAY-${paymentId} (BILL-${billId})`, 'green');
+            addAuditRow('admin_ormoc', 'Admin', 'Payment Approved', `Admin gave final approval for payment PAY-${paymentId} (BILL-${billId})`, 'green');
             showToast(duplicates.length > 0 ? `Payment verified, bill marked as Paid. ${duplicates.length} duplicate payment(s) cancelled.` : 'Payment verified and the bill is now marked as Paid.', 'success');
 
             loadAdminData();
