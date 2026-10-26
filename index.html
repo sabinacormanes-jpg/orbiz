@@ -1336,7 +1336,7 @@
         
         function confirmLogout() {
             closeModal('logoutModal');
-            addAuditRow(currentUser ? currentUser.user_id : 2, currentUser ? currentUser.role : 'Resident', 'Logout', 'User logged out');
+            if (currentUser) addAuditRow(currentUser.user_id, currentUser.role, 'Logout', 'User logged out');
             currentUser = null;
             activeUserBill = null;
             switchView('roleSelectView');
@@ -1943,51 +1943,58 @@
         }
 
         async function adminApprovePayment(paymentId, userId, amount) {
-            await dbFetch('payments', {
+            // Find the bill that is being paid: the resident's newest bill that is not Paid yet
+            const openBills = await dbFetch('bills', {
+                method: 'GET',
+                query: `user_id=eq.${userId}&status=neq.Paid&order=created_at.desc&limit=1`
+            });
+            if (!openBills || openBills.length === 0) {
+                return showToast('No unpaid bill was found for this resident. Payment was not approved.', 'error');
+            }
+            const billId = openBills[0].bill_id;
+
+            const verified = await dbFetch('payments', {
                 method: 'PATCH',
                 query: `payment_id=eq.${paymentId}`,
                 body: { status: 'Verified' }
             });
+            if (!verified || verified.length === 0) {
+                return showToast('Could not verify the payment. Please try again.', 'error');
+            }
 
-            // only the newest bill (the one the resident paid) becomes Paid
-            const existingBills = await dbFetch('bills', {
-                method: 'GET',
-                query: `user_id=eq.${userId}&order=created_at.desc&limit=1`
+            // Only the status changes. The bill amount stays in the database as a record.
+            const settled = await dbFetch('bills', {
+                method: 'PATCH',
+                query: `bill_id=eq.${billId}`,
+                body: { status: 'Paid' }
             });
-
-            if (existingBills && existingBills.length > 0) {
-                await dbFetch('bills', {
+            if (!settled || settled.length === 0) {
+                // undo the payment status so both tables stay matching
+                await dbFetch('payments', {
                     method: 'PATCH',
-                    query: `bill_id=eq.${existingBills[0].bill_id}`,
-                    body: { status: 'Paid', amount: 0 }
+                    query: `payment_id=eq.${paymentId}`,
+                    body: { status: 'Staff Verified' }
                 });
-            } else {
-                await dbFetch('bills', {
-                    method: 'POST',
-                    body: {
-                        user_id: userId,
-                        amount: 0,
-                        status: 'Paid',
-                        billing_period: 'October 2026',
-                        due_date: '2026-11-15'
-                    }
-                });
+                return showToast('Could not mark the bill as Paid. Nothing was changed, please try again.', 'error');
             }
 
             await notifyUser(userId, `Your payment PAY-${paymentId} of ₱${amount} was approved. Your bill is now settled. Thank you!`);
-            addPaymentLog('Admin Final Approval', 'System Admin', `Approved: Settled ₱${amount} for User ID ${userId}`);
-            addAuditRow('admin_ormoc', 'Admin', 'Approval Complete', `Executive sign-off given for payment PAY-${paymentId}`, 'green');
-            showToast('Payment verified and bill settled to ₱0.00 (Paid).', 'success');
+            addPaymentLog('Admin Final Approval', 'System Admin', `Approved: Settled ₱${amount} for User ID ${userId} (BILL-${billId})`);
+            addAuditRow('admin_ormoc', 'Admin', 'Approval Complete', `Executive sign-off given for payment PAY-${paymentId} (BILL-${billId})`, 'green');
+            showToast('Payment verified and the bill is now marked as Paid.', 'success');
 
             loadAdminData();
         }
 
         async function adminRejectPayment(paymentId, userId) {
-            await dbFetch('payments', {
+            const rejected = await dbFetch('payments', {
                 method: 'PATCH',
                 query: `payment_id=eq.${paymentId}`,
                 body: { status: 'Rejected' }
             });
+            if (!rejected || rejected.length === 0) {
+                return showToast('Could not reject the payment. Please try again.', 'error');
+            }
 
             await notifyUser(userId, `NOTICE: Your payment PAY-${paymentId} was rejected by the Admin. Please contact the office or pay again.`);
             addPaymentLog('Admin Rejection', 'System Admin', `Admin rejected payment PAY-${paymentId} for User ID ${userId}`);
@@ -2203,14 +2210,14 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 query: `water_account_number=eq.${encodeURIComponent(acct)}`
             });
 
-            let targetUserId = 2;
-            if (users && users.length > 0) {
-                targetUserId = users[0].user_id;
+            if (!users || users.length === 0) {
+                return showToast('Water account number was not found.', 'error');
             }
+            const targetUserId = users[0].user_id;
 
             const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
-            await dbFetch('otp_codes', {
+            const otpSaved = await dbFetch('otp_codes', {
                 method: 'POST',
                 body: {
                     user_id: targetUserId,
@@ -2219,6 +2226,9 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     is_used: false
                 }
             });
+            if (!otpSaved) {
+                return showToast('Could not create the OTP. Please try again.', 'error');
+            }
 
             document.getElementById('otpCodeDisplay').textContent = generatedOtp;
             document.getElementById('demoOtpDisplay').textContent = generatedOtp;
@@ -2238,10 +2248,23 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             const otp = document.getElementById('otpInput').value.trim();
             const newPass = document.getElementById('newPass').value;
             const acct = document.getElementById('otpAccount').value.trim();
-            const generatedOtp = document.getElementById('demoOtpDisplay').textContent;
 
-            if (otp !== generatedOtp && otp !== '482910') {
-                return showToast('Invalid OTP code.', 'error');
+            const owner = await dbFetch('users', {
+                method: 'GET',
+                query: `water_account_number=eq.${encodeURIComponent(acct)}&select=user_id`
+            });
+            if (!owner || owner.length === 0) {
+                return showToast('Water account number was not found.', 'error');
+            }
+            const ownerId = owner[0].user_id;
+
+            // the OTP must belong to THIS account, must not be used yet, and must not be expired
+            const validOtp = await dbFetch('otp_codes', {
+                method: 'GET',
+                query: `user_id=eq.${ownerId}&otp_code=eq.${encodeURIComponent(otp)}&is_used=eq.false&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`
+            });
+            if (!validOtp || validOtp.length === 0) {
+                return showToast('Invalid or expired OTP code.', 'error');
             }
 
             const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@\$!%*?&])[A-Za-z\d@$!\%*?&]{8,}$/;
@@ -2249,16 +2272,19 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 return showToast('Min 8 chars with upper, lower, number & special char required.', 'error');
             }
 
+            const passUpdated = await dbFetch('users', {
+                method: 'PATCH',
+                query: `user_id=eq.${ownerId}`,
+                body: { password_hash: newPass }
+            });
+            if (!passUpdated || passUpdated.length === 0) {
+                return showToast('Could not update the password. Please try again.', 'error');
+            }
+
             await dbFetch('otp_codes', {
                 method: 'PATCH',
-                query: `otp_code=eq.${otp}`,
+                query: `user_id=eq.${ownerId}&otp_code=eq.${encodeURIComponent(otp)}`,
                 body: { is_used: true }
-            });
-
-            await dbFetch('users', {
-                method: 'PATCH',
-                query: `water_account_number=eq.${encodeURIComponent(acct)}`,
-                body: { password_hash: newPass }
             });
 
             showToast('OTP verified & password updated in database!', 'success');
@@ -2312,6 +2338,10 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 }
             });
 
+            if (!newUser) {
+                return showToast('Could not create the account. Please try again.', 'error');
+            }
+
             let createdUserId = null;
             if (Array.isArray(newUser) && newUser.length > 0) {
                 createdUserId = newUser[0].user_id || newUser[0].id;
@@ -2328,7 +2358,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             }
 
             addPaymentLog('Account Registered', name, `Created new ${role} account (${account})`);
-            addAuditRow(createdUserId || 2, role, 'Registration', `Created ${role} account for ${name}`, 'green');
+            addAuditRow(createdUserId, role, 'Registration', `Created ${role} account for ${name}`, 'green');
 
             showToast(`${role} account created in database!`, 'success');
             document.getElementById('registerForm').reset();
@@ -2423,45 +2453,60 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
         }
 
         async function startPayment() {
-            const payerId = currentUser ? currentUser.user_id : 2;
+            // the resident must be logged in (no more silent fallback to user 2)
+            if (!currentUser || typeof currentUser.user_id !== 'number') {
+                showToast('Your session ended. Please log in again to pay your bill.', 'error');
+                switchView('loginView');
+                return;
+            }
+            if (!activeUserBill || activeUserBill.status === 'Paid') {
+                return showToast('You have no unpaid bill to pay.', 'error');
+            }
+
+            const payerId = currentUser.user_id;
 
             // stop double payments: one payment at a time while the first is still being checked
             const openPayments = await dbFetch('payments', {
                 method: 'GET',
                 query: `user_id=eq.${payerId}&status=in.(Pending,Staff Verified)&select=payment_id`
             });
-            if (openPayments && openPayments.length > 0) {
+            if (openPayments === null) {
+                return showToast('Could not check your payments. Please check your connection and try again.', 'error');
+            }
+            if (openPayments.length > 0) {
                 return showToast('You already have a payment waiting for approval. Please wait for it to finish.', 'error');
             }
 
             const refNo = "TXN-" + Math.floor(100000000 + Math.random() * 900000000);
-            const userId = currentUser ? currentUser.user_id : 2;
-            const payAmt = activeUserBill ? activeUserBill.amount : 405.00;
+            const payAmt = parseFloat(activeUserBill.amount) || 0;
 
-            document.getElementById('confRef').textContent = refNo;
-
-            await dbFetch('payments', {
+            const saved = await dbFetch('payments', {
                 method: 'POST',
                 body: {
-                    user_id: userId,
+                    user_id: payerId,
                     amount: payAmt,
                     payment_method: 'GCash',
                     reference_number: refNo,
                     status: 'Pending'
                 }
             });
+            if (!saved || saved.length === 0) {
+                return showToast('Payment was not saved. Please try again.', 'error');
+            }
 
-            await notifyUser(userId, `Your payment of ₱${payAmt} (Ref: ${refNo}) was submitted. Waiting for staff review.`);
+            document.getElementById('confRef').textContent = refNo;
+
+            await notifyUser(payerId, `Your payment of ₱${payAmt.toFixed(2)} (Ref: ${refNo}) was submitted. Waiting for staff review.`);
 
             await addPaymentLog(
                 'Submit Payment',
-                currentUser ? currentUser.full_name : 'Consumer',
-                `Submitted ₱${payAmt} via GCash (Ref: ${refNo})`
+                currentUser.full_name || 'Resident',
+                `Submitted ₱${payAmt.toFixed(2)} via GCash (Ref: ${refNo})`
             );
 
             switchView('confirmationView');
             showToast('Payment submitted successfully! Saved to DB, awaiting Staff Review.', 'success');
-            addAuditRow(userId, 'Resident', 'Payment Submitted', `Paid ₱${payAmt} via GCash (${refNo})`, 'blue');
+            addAuditRow(payerId, 'Resident', 'Payment Submitted', `Paid ₱${payAmt.toFixed(2)} via GCash (${refNo})`, 'blue');
         }
 
         function switchStaffTab(tab) {
@@ -2591,26 +2636,37 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
         }
 
         async function verifyPaymentAction(paymentId, userId, action) {
-            const staffName = currentUser ? currentUser.full_name : 'Staff';
-            const staffId = currentUser ? currentUser.user_id : 'STF-2201';
+            if (!currentUser) {
+                showToast('Your session ended. Please log in again.', 'error');
+                switchView('staffLoginView');
+                return;
+            }
+            const staffName = currentUser.full_name || 'Staff';
+            const staffId = currentUser.user_id;
 
             if (action === 'endorse') {
-                await dbFetch('payments', {
+                const endorsed = await dbFetch('payments', {
                     method: 'PATCH',
                     query: `payment_id=eq.${paymentId}`,
                     body: { status: 'Staff Verified' }
                 });
+                if (!endorsed || endorsed.length === 0) {
+                    return showToast('Could not endorse the payment. Please try again.', 'error');
+                }
 
                 await notifyUser(userId, `Your payment PAY-${paymentId} was checked by staff and sent to the Admin for final approval.`);
                 addPaymentLog('Staff Endorsement', staffName, `Endorsed payment PAY-${paymentId} for Admin final approval`);
                 showToast('Staff verification complete! Forwarded to Admin for final approval.', 'success');
                 addAuditRow(staffId, 'Meter Reader', 'Staff Endorsed Payment', `Endorsed payment PAY-${paymentId} for User ${userId}`, 'blue');
             } else {
-                await dbFetch('payments', {
+                const rejected = await dbFetch('payments', {
                     method: 'PATCH',
                     query: `payment_id=eq.${paymentId}`,
                     body: { status: 'Rejected' }
                 });
+                if (!rejected || rejected.length === 0) {
+                    return showToast('Could not reject the payment. Please try again.', 'error');
+                }
 
                 await notifyUser(userId, `NOTICE: Your payment PAY-${paymentId} was rejected by staff. Please check your details and pay again.`);
                 addPaymentLog('Staff Rejection', staffName, `Rejected payment PAY-${paymentId} for User ID ${userId}`);
