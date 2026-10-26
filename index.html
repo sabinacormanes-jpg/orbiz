@@ -1219,6 +1219,30 @@
             }
         }
 
+        // Gets one resident's full name (falls back to "User 28" only if the lookup fails)
+        async function getResidentName(userId) {
+            const rows = await dbFetch('users', {
+                method: 'GET',
+                query: `user_id=eq.${userId}&select=full_name`
+            });
+            if (rows && rows.length > 0 && rows[0].full_name) return rows[0].full_name;
+            return `User ${userId}`;
+        }
+
+        // After one payment is approved, the same resident's other open payments are duplicates.
+        // They are cancelled so they disappear from the staff and admin queues.
+        async function cancelDuplicatePayments(userId, keepPaymentId) {
+            const filter = `user_id=eq.${userId}&payment_id=neq.${keepPaymentId}&status=in.(Pending,Staff Verified)`;
+            let cancelled = await dbFetch('payments', { method: 'PATCH', query: filter, body: { status: 'Cancelled' } });
+            if (cancelled === null) {
+                // the database may not accept "Cancelled", so use "Rejected" instead
+                cancelled = await dbFetch('payments', { method: 'PATCH', query: filter, body: { status: 'Rejected' } });
+            }
+            return cancelled || [];
+        }
+
+        let paymentInFlight = false;
+
         // Gets all residents and returns a map: user_id -> full name
         async function getUserNameMap() {
             const users = await dbFetch('users', { method: 'GET', query: 'select=user_id,full_name' });
@@ -1979,9 +2003,18 @@
             }
 
             await notifyUser(userId, `Your payment PAY-${paymentId} of ₱${amount} was approved. Your bill is now settled. Thank you!`);
-            addPaymentLog('Admin Final Approval', 'System Admin', `Approved: Settled ₱${amount} for User ID ${userId} (BILL-${billId})`);
+            const residentName = await getResidentName(userId);
+            addPaymentLog('Admin Final Approval', 'System Admin', `Approved: Settled ₱${amount} for ${residentName} (BILL-${billId})`);
+
+            // remove the accidental / double payments of this resident
+            const duplicates = await cancelDuplicatePayments(userId, paymentId);
+            if (duplicates.length > 0) {
+                await notifyUser(userId, `Your extra payment (${duplicates.map(d => d.reference_number || 'PAY-' + d.payment_id).join(', ')}) was cancelled because your bill is already paid. You were not charged twice.`);
+                addPaymentLog('Duplicate Payment Cancelled', 'System Admin', `Cancelled ${duplicates.length} duplicate payment(s) of ${residentName} after BILL-${billId} was settled`);
+                addAuditRow('admin_ormoc', 'Admin', 'Duplicate Payment Cancelled', `Cancelled ${duplicates.length} duplicate payment(s) of ${residentName}`, 'blue');
+            }
             addAuditRow('admin_ormoc', 'Admin', 'Approval Complete', `Executive sign-off given for payment PAY-${paymentId} (BILL-${billId})`, 'green');
-            showToast('Payment verified and the bill is now marked as Paid.', 'success');
+            showToast(duplicates.length > 0 ? `Payment verified, bill marked as Paid. ${duplicates.length} duplicate payment(s) cancelled.` : 'Payment verified and the bill is now marked as Paid.', 'success');
 
             loadAdminData();
         }
@@ -1997,7 +2030,7 @@
             }
 
             await notifyUser(userId, `NOTICE: Your payment PAY-${paymentId} was rejected by the Admin. Please contact the office or pay again.`);
-            addPaymentLog('Admin Rejection', 'System Admin', `Admin rejected payment PAY-${paymentId} for User ID ${userId}`);
+            addPaymentLog('Admin Rejection', 'System Admin', `Admin rejected payment PAY-${paymentId} for ${await getResidentName(userId)}`);
             addAuditRow('admin_ormoc', 'Admin', 'Payment Rejected', `Admin rejected payment PAY-${paymentId}`, 'red');
             showToast('Payment submission rejected by Admin.', 'error');
 
@@ -2019,9 +2052,10 @@
                 }
             });
 
-            addPaymentLog('Water Cut-Off Authorized', 'System Admin', `Execution: Disconnected water supply for User ID ${userId}`);
-            addAuditRow('admin_ormoc', 'Admin', 'Cut-Off Executed', `Authorized water supply disconnection for User ID ${userId}`, 'red');
-            showToast(`Water service cut-off authorized & notice issued to User ID ${userId}.`, 'error');
+            const cutName = await getResidentName(userId);
+            addPaymentLog('Water Cut-Off Authorized', 'System Admin', `Execution: Disconnected water supply for ${cutName}`);
+            addAuditRow('admin_ormoc', 'Admin', 'Cut-Off Executed', `Authorized water supply disconnection for ${cutName}`, 'red');
+            showToast(`Water service cut-off authorized & notice issued to ${cutName}.`, 'error');
 
             loadAdminData();
         }
@@ -2463,6 +2497,9 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 return showToast('You have no unpaid bill to pay.', 'error');
             }
 
+            if (paymentInFlight) return;   // ignore a second click while the first one is still saving
+            paymentInFlight = true;
+            try {
             const payerId = currentUser.user_id;
 
             // stop double payments: one payment at a time while the first is still being checked
@@ -2507,6 +2544,9 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             switchView('confirmationView');
             showToast('Payment submitted successfully! Saved to DB, awaiting Staff Review.', 'success');
             addAuditRow(payerId, 'Resident', 'Payment Submitted', `Paid ₱${payAmt.toFixed(2)} via GCash (${refNo})`, 'blue');
+            } finally {
+                paymentInFlight = false;
+            }
         }
 
         function switchStaffTab(tab) {
@@ -2657,7 +2697,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 await notifyUser(userId, `Your payment PAY-${paymentId} was checked by staff and sent to the Admin for final approval.`);
                 addPaymentLog('Staff Endorsement', staffName, `Endorsed payment PAY-${paymentId} for Admin final approval`);
                 showToast('Staff verification complete! Forwarded to Admin for final approval.', 'success');
-                addAuditRow(staffId, 'Meter Reader', 'Staff Endorsed Payment', `Endorsed payment PAY-${paymentId} for User ${userId}`, 'blue');
+                addAuditRow(staffId, 'Meter Reader', 'Staff Endorsed Payment', `Endorsed payment PAY-${paymentId} for ${await getResidentName(userId)}`, 'blue');
             } else {
                 const rejected = await dbFetch('payments', {
                     method: 'PATCH',
@@ -2669,9 +2709,9 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 }
 
                 await notifyUser(userId, `NOTICE: Your payment PAY-${paymentId} was rejected by staff. Please check your details and pay again.`);
-                addPaymentLog('Staff Rejection', staffName, `Rejected payment PAY-${paymentId} for User ID ${userId}`);
+                addPaymentLog('Staff Rejection', staffName, `Rejected payment PAY-${paymentId} for ${await getResidentName(userId)}`);
                 showToast('Payment rejected by Staff.', 'error');
-                addAuditRow(staffId, 'Meter Reader', 'Payment Rejected', `Staff rejected payment for User ${userId}`, 'red');
+                addAuditRow(staffId, 'Meter Reader', 'Payment Rejected', `Staff rejected payment for ${await getResidentName(userId)}`, 'red');
             }
 
             loadStaffData();
@@ -2680,6 +2720,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
         async function issueCutoffWarning(billId, userId, actionType) {
             const staffName = currentUser ? currentUser.full_name : 'Staff';
             const staffId = currentUser ? currentUser.user_id : 'STF-2201';
+            const residentName = await getResidentName(userId);
 
             if (actionType === 'warning') {
                 await dbFetch('bills', {
@@ -2696,9 +2737,9 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     }
                 });
 
-                addPaymentLog('Warning Notice', staffName, `Issued disconnection warning for User ID ${userId}`);
-                showToast(`Disconnection Warning notice sent to User ${userId}!`, 'success');
-                addAuditRow(staffId, 'Meter Reader', 'Cut-Off Warning Sent', `Issued warning for User ${userId}`, 'red');
+                addPaymentLog('Warning Notice', staffName, `Issued disconnection warning for ${residentName}`);
+                showToast(`Disconnection Warning notice sent to ${residentName}!`, 'success');
+                addAuditRow(staffId, 'Meter Reader', 'Cut-Off Warning Sent', `Issued warning for ${residentName}`, 'red');
             } else {
                 await dbFetch('bills', {
                     method: 'PATCH',
@@ -2714,9 +2755,9 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     }
                 });
 
-                addPaymentLog('Cut-Off Requested', staffName, `Requested Admin authorization to cut off water for User ID ${userId}`);
+                addPaymentLog('Cut-Off Requested', staffName, `Requested Admin authorization to cut off water for ${residentName}`);
                 showToast(`Cut-off request forwarded to Admin for authorization.`, 'error');
-                addAuditRow(staffId, 'Meter Reader', 'Cut-Off Request Sent', `Requested Admin cut-off authorization for User ${userId}`, 'red');
+                addAuditRow(staffId, 'Meter Reader', 'Cut-Off Request Sent', `Requested Admin cut-off authorization for ${residentName}`, 'red');
             }
 
             loadStaffData();
@@ -2776,7 +2817,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                         </div>
                         <div class="text-right">
                             <p class="font-bold text-sm mb-1">₱${p.amount}</p>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === 'Verified' ? 'bg-green-500 text-white' : (p.status === 'Rejected' ? 'bg-red-500 text-white' : 'bg-amber-400 text-orbis-navy')}">${p.status}</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${p.status === 'Verified' ? 'bg-green-500 text-white' : (p.status === 'Rejected' ? 'bg-red-500 text-white' : (p.status === 'Cancelled' ? 'bg-gray-400 text-white' : 'bg-amber-400 text-orbis-navy'))}">${p.status}</span>
                         </div>
                     `;
                     list.appendChild(card);
