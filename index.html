@@ -1350,7 +1350,7 @@
             }
         }
 
-                function openModal(modalId) {
+        function openModal(modalId) {
             document.getElementById(modalId).classList.add('active');
             if (modalId === 'createBillModal') {
                 populateBillAccountDropdown();
@@ -1693,46 +1693,48 @@
 
     return `${month} ${day}, ${year}`;
 }
-let currentRates = { rate_per_cubic: 25, minimum_charge: 150, penalty_percent: 10, due_days: 15 };
 
-async function loadRates() {
-    const rows = await dbFetch('rates', { method: 'GET', query: 'id=eq.1&select=*' });
-    if (rows && rows.length > 0) {
-        currentRates = {
-            rate_per_cubic: parseFloat(rows[0].rate_per_cubic),
-            minimum_charge: parseFloat(rows[0].minimum_charge),
-            penalty_percent: parseFloat(rows[0].penalty_percent),
-            due_days: parseInt(rows[0].due_days)
-        };
-    }
-}
+        let currentRates = { rate_per_cubic: 25, minimum_charge: 150, penalty_percent: 10, due_days: 15 };
 
-function computeBillFromReadings() {
-    const prev = parseFloat(document.getElementById('billPrevReading').value);
-    const pres = parseFloat(document.getElementById('billPresReading').value);
-    const amountEl = document.getElementById('billAmount');
-    const noteEl = document.getElementById('billComputeNote');
-    if (isNaN(prev) || isNaN(pres) || pres < prev) {
-        amountEl.value = '0.00';
-        noteEl.textContent = 'Present reading must be the same or higher than the previous reading.';
-        return;
-    }
-    const used = pres - prev;
-    const byRate = used * currentRates.rate_per_cubic;
-    const amount = Math.max(byRate, currentRates.minimum_charge);
-    amountEl.value = amount.toFixed(2);
-    noteEl.textContent = `${used} cu.m. x ₱${currentRates.rate_per_cubic} = ₱${byRate.toFixed(2)} (minimum charge ₱${currentRates.minimum_charge})`;
-}
+        async function loadRates() {
+            const rows = await dbFetch('rates', { method: 'GET', query: 'id=eq.1&select=*' });
+            if (rows && rows.length > 0) {
+                currentRates = {
+                    rate_per_cubic: parseFloat(rows[0].rate_per_cubic),
+                    minimum_charge: parseFloat(rows[0].minimum_charge),
+                    penalty_percent: parseFloat(rows[0].penalty_percent),
+                    due_days: parseInt(rows[0].due_days)
+                };
+            }
+        }
 
-function setDefaultDueDate() {
-    const d = new Date();
-    d.setDate(d.getDate() + currentRates.due_days);
-    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-    document.getElementById('billDueDate').value = local.toISOString().slice(0, 10);
-}
+        function computeBillFromReadings() {
+            const prev = parseFloat(document.getElementById('billPrevReading').value);
+            const pres = parseFloat(document.getElementById('billPresReading').value);
+            const amountEl = document.getElementById('billAmount');
+            const noteEl = document.getElementById('billComputeNote');
+            if (isNaN(prev) || isNaN(pres) || pres < prev) {
+                amountEl.value = '0.00';
+                noteEl.textContent = 'Present reading must be the same or higher than the previous reading.';
+                return;
+            }
+            const used = pres - prev;
+            const byRate = used * currentRates.rate_per_cubic;
+            const amount = Math.max(byRate, currentRates.minimum_charge);
+            amountEl.value = amount.toFixed(2);
+            noteEl.textContent = `${used} cu.m. x ₱${currentRates.rate_per_cubic} = ₱${byRate.toFixed(2)} (minimum charge ₱${currentRates.minimum_charge})`;
+        }
 
-document.getElementById('billPrevReading').addEventListener('input', computeBillFromReadings);
-document.getElementById('billPresReading').addEventListener('input', computeBillFromReadings);
+        function setDefaultDueDate() {
+            const d = new Date();
+            d.setDate(d.getDate() + currentRates.due_days);
+            const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+            document.getElementById('billDueDate').value = local.toISOString().slice(0, 10);
+        }
+
+        document.getElementById('billPrevReading').addEventListener('input', computeBillFromReadings);
+        document.getElementById('billPresReading').addEventListener('input', computeBillFromReadings);
+
         document.getElementById('createBillForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const selectedAcct = document.getElementById('billAccountNum').value.trim();
@@ -1974,6 +1976,7 @@ document.getElementById('billPresReading').addEventListener('input', computeBill
                 body: {
                     user_id: targetUserId,
                     amount: parseFloat(approved.amount),
+                    consumption: parseFloat(approved.presReading) - parseFloat(approved.prevReading),
                     status: 'Unpaid',
                     billing_period: approved.period,
                     due_date: approved.dueDate
@@ -2130,6 +2133,13 @@ document.getElementById('billPresReading').addEventListener('input', computeBill
             const bText = document.getElementById('bPeriodText');
             if (bText) bText.textContent = activeUserBill.billing_period;
         }
+
+        const usedCu = parseFloat(activeUserBill.consumption);
+        const usedText = isNaN(usedCu) ? 'N/A' : usedCu + ' cu.m.';
+        const bCons = document.getElementById('bConsumption');
+        if (bCons) bCons.textContent = usedText;
+        const uCons = document.getElementById('uConsumption');
+        if (uCons) uCons.textContent = usedText;
 
         // Formats ISO string (2027-01-15T00:00:00+00:00) -> "January 15, 2027"
         if (activeUserBill.due_date) {
