@@ -1350,12 +1350,11 @@
             }
         }
 
-        function openModal(modalId) {
+                function openModal(modalId) {
             document.getElementById(modalId).classList.add('active');
             if (modalId === 'createBillModal') {
-    populateBillAccountDropdown();
-    loadRates().then(() => { computeBillFromReadings(); setDefaultDueDate(); });
-                }
+                populateBillAccountDropdown();
+                loadRates().then(() => { computeBillFromReadings(); setDefaultDueDate(); });
             }
         }
         
