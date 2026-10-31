@@ -875,7 +875,19 @@
                     <div class="bg-white rounded-2xl p-4 shadow-sm mb-4">
                         <p class="text-xs text-gray-500">This month's consumption</p>
                         <h1 class="text-3xl font-extrabold text-orbis-navy mt-1" id="uConsumption">19 cu.m.</h1>
-                        <p class="text-green-600 text-xs font-semibold mt-1"><i class="fa-solid fa-arrow-trend-down mr-1"></i>12% lower than last month</p>
+                        <p id="uTrend" class="text-xs font-semibold mt-1 text-gray-400">Checking your last readings...</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-4 shadow-sm mb-4" id="forecastCard">
+                        <div class="flex justify-between items-start">
+                            <p class="text-xs text-gray-500">Forecast for next month</p>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Estimate</span>
+                        </div>
+                        <h1 class="text-3xl font-extrabold text-orbis-navy mt-1" id="fcConsumption">-- cu.m.</h1>
+                        <p class="text-sm font-bold text-orbis-navy mt-0.5" id="fcAmount">Estimated bill: --</p>
+                        <p class="text-xs mt-1 text-gray-500" id="fcTrend"></p>
+                        <div id="fcChart" class="flex items-end gap-2 h-28 mt-4"></div>
+                        <p class="text-[10px] text-gray-400 mt-3" id="fcNote">The forecast is the average of your last approved readings.</p>
                     </div>
                 </div>
                 <div class="bottom-nav consumer-nav">
@@ -1311,6 +1323,8 @@
                 loadUserNotifications();
             } else if (viewId === 'paymentHistoryView') {
                 loadUserPayments();
+            } else if (viewId === 'waterUsageView') {
+                loadUsageForecast();
             }
         }
 
@@ -1706,6 +1720,107 @@
                     due_days: parseInt(rows[0].due_days)
                 };
             }
+        }
+
+        // ---- Usage forecast: average of the last (up to 3) approved readings ----
+        async function loadUsageForecast() {
+            const trendEl = document.getElementById('uTrend');
+            const fcCons = document.getElementById('fcConsumption');
+            const fcAmt = document.getElementById('fcAmount');
+            const fcTrend = document.getElementById('fcTrend');
+            const fcChart = document.getElementById('fcChart');
+            const fcNote = document.getElementById('fcNote');
+
+            if (!currentUser || typeof currentUser.user_id !== 'number') {
+                trendEl.textContent = 'Please log in as a Resident.';
+                return;
+            }
+
+            await loadRates();
+            const rows = await dbFetch('meter_readings', {
+                method: 'GET',
+                query: `user_id=eq.${currentUser.user_id}&status=eq.Approved&select=previous_reading,present_reading,created_at&order=created_at.desc&limit=6`
+            });
+
+            if (rows === null) {
+                trendEl.textContent = 'Could not load your readings. Please try again.';
+                fcNote.textContent = 'Could not load your readings. Please check your connection.';
+                return;
+            }
+
+            // oldest first, keep only valid numbers
+            const history = rows.slice().reverse().map(r => ({
+                used: parseFloat(r.present_reading) - parseFloat(r.previous_reading),
+                label: r.created_at ? new Date(r.created_at).toLocaleString('en-US', { month: 'short' }) : '?'
+            })).filter(h => isFinite(h.used) && h.used >= 0);
+
+            fcChart.innerHTML = '';
+
+            if (history.length === 0) {
+                trendEl.textContent = 'No approved readings yet.';
+                trendEl.className = 'text-xs font-semibold mt-1 text-gray-400';
+                fcCons.textContent = '-- cu.m.';
+                fcAmt.textContent = 'Estimated bill: --';
+                fcTrend.textContent = '';
+                fcNote.textContent = 'Not enough data yet. The forecast appears after your first approved bill.';
+                return;
+            }
+
+            // this month vs last month
+            const latest = history[history.length - 1].used;
+            if (history.length >= 2 && history[history.length - 2].used > 0) {
+                const before = history[history.length - 2].used;
+                const pct = Math.round(Math.abs(latest - before) / before * 100);
+                if (latest < before) {
+                    trendEl.className = 'text-green-600 text-xs font-semibold mt-1';
+                    trendEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down mr-1"></i>${pct}% lower than last month`;
+                } else if (latest > before) {
+                    trendEl.className = 'text-red-500 text-xs font-semibold mt-1';
+                    trendEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up mr-1"></i>${pct}% higher than last month`;
+                } else {
+                    trendEl.className = 'text-gray-500 text-xs font-semibold mt-1';
+                    trendEl.textContent = 'Same as last month';
+                }
+            } else {
+                trendEl.className = 'text-xs font-semibold mt-1 text-gray-400';
+                trendEl.textContent = 'Not enough readings to compare yet.';
+            }
+
+            // forecast = average of the last 3 months (or fewer if that is all we have)
+            const recent = history.slice(-3);
+            const forecast = recent.reduce((sum, h) => sum + h.used, 0) / recent.length;
+            const forecastRounded = Math.round(forecast * 10) / 10;
+            const estAmount = Math.max(forecast * currentRates.rate_per_cubic, currentRates.minimum_charge);
+
+            fcCons.textContent = `${forecastRounded} cu.m.`;
+            fcAmt.textContent = `Estimated bill: ₱${estAmount.toFixed(2)}`;
+
+            if (latest > 0) {
+                const diff = Math.round(Math.abs(forecast - latest) / latest * 100);
+                fcTrend.textContent = forecast < latest
+                    ? `About ${diff}% lower than your latest bill (${latest} cu.m.)`
+                    : (forecast > latest ? `About ${diff}% higher than your latest bill (${latest} cu.m.)` : `Same as your latest bill (${latest} cu.m.)`);
+            } else {
+                fcTrend.textContent = '';
+            }
+
+            // simple bar chart: past months + the forecast bar
+            const bars = history.map(h => ({ label: h.label, value: h.used, forecast: false }));
+            bars.push({ label: 'Next', value: forecast, forecast: true });
+            const maxVal = Math.max(...bars.map(b => b.value), 1);
+            bars.forEach(b => {
+                const h = Math.max(Math.round(b.value / maxVal * 80), 4);
+                const col = document.createElement('div');
+                col.className = 'flex-1 flex flex-col items-center justify-end h-full';
+                col.innerHTML = `
+                    <span class="text-[9px] text-gray-500 mb-0.5">${Math.round(b.value * 10) / 10}</span>
+                    <div class="w-full rounded-t-md ${b.forecast ? 'bg-blue-300 border border-dashed border-blue-500' : 'bg-orbis-navy'}" style="height:${h}px"></div>
+                    <span class="text-[9px] ${b.forecast ? 'text-blue-600 font-bold' : 'text-gray-400'} mt-1">${b.label}</span>
+                `;
+                fcChart.appendChild(col);
+            });
+
+            fcNote.textContent = `Based on your last ${recent.length} approved reading${recent.length > 1 ? 's' : ''}. The more bills you have, the better the estimate.`;
         }
 
         function computeBillFromReadings() {
