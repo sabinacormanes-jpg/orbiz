@@ -283,7 +283,7 @@
         <div id="createBillModal" class="modal-overlay">
             <div class="bg-white p-6 rounded-3xl w-[90%] max-w-md shadow-2xl">
                 <div class="flex justify-between items-center mb-4 border-b pb-3">
-                    <h3 class="text-lg font-bold text-orbis-navy font-display"><i class="fa-solid fa-file-circle-plus text-blue-600 mr-2"></i>Create New Bill / Advance Payment</h3>
+                    <h3 class="text-lg font-bold text-orbis-navy font-display"><i class="fa-solid fa-file-circle-plus text-blue-600 mr-2"></i>Create New Bill</h3>
                     <button onclick="closeModal('createBillModal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
                 </div>
                 <form id="createBillForm" class="flex flex-col gap-3">
@@ -294,8 +294,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-orbis-navy/70 uppercase mb-1 ml-1">Billing Period / Description</label>
-                        <input type="text" id="billPeriod" required class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="e.g. Nov 2026 (Advance Payment)" value="Nov 2026 (Advance Payment)">
+                        <label class="block text-xs font-bold text-orbis-navy/70 uppercase mb-1 ml-1">Billing Period</label>
+                        <input type="text" id="billPeriod" required class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="e.g. November 2026" value="">
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
@@ -590,7 +590,7 @@
                         <p class="text-[10px] text-orbis-light/70">Staff Directory & Billing Queue</p>
                     </div>
                     <button onclick="openModal('createBillModal')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 shadow">
-                        <i class="fa-solid fa-plus-circle"></i> New Bill / Advance
+                        <i class="fa-solid fa-plus-circle"></i> New Bill
                     </button>
                 </div>
 
@@ -1505,7 +1505,7 @@
             document.getElementById(modalId).classList.add('active');
             if (modalId === 'createBillModal') {
                 populateBillAccountDropdown();
-                loadRates().then(() => { computeBillFromReadings(); setDefaultDueDate(); });
+                loadRates().then(() => { computeBillFromReadings(); setDefaultDueDate(); setDefaultBillPeriod(); });
             }
         }
         
@@ -2251,13 +2251,16 @@
             noteEl.textContent = `${used} cu.m. x ₱${currentRates.rate_per_cubic} = ₱${byRate.toFixed(2)} (minimum charge ₱${currentRates.minimum_charge})`;
         }
 
+        function setDefaultBillPeriod() {
+            document.getElementById('billPeriod').value = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        }
+
         function setDefaultDueDate() {
             const d = new Date();
             d.setDate(d.getDate() + currentRates.due_days);
             const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
             document.getElementById('billDueDate').value = local.toISOString().slice(0, 10);
         }
-
         document.getElementById('billPrevReading').addEventListener('input', computeBillFromReadings);
         document.getElementById('billPresReading').addEventListener('input', computeBillFromReadings);
 
@@ -2268,13 +2271,11 @@
             if (!selectedAcct) {
                 return showToast('Please select a resident water account.', 'error');
             }
-
             const prevReading = parseFloat(document.getElementById('billPrevReading').value);
             const presReading = parseFloat(document.getElementById('billPresReading').value);
             if (presReading < prevReading) {
                 return showToast('Present reading cannot be lower than the previous reading.', 'error');
             }
-
             const owner = await dbFetch('users', {
                 method: 'GET',
                 query: `water_account_number=eq.${encodeURIComponent(selectedAcct)}&select=user_id,full_name`
@@ -2282,7 +2283,6 @@
             if (!owner || owner.length === 0) {
                 return showToast('Resident account was not found in the database.', 'error');
             }
-
             const period = document.getElementById('billPeriod').value.trim();
             const amount = parseFloat(document.getElementById('billAmount').value).toFixed(2);
 
@@ -2300,17 +2300,14 @@
                     created_by: (currentUser && typeof currentUser.user_id === 'number') ? currentUser.user_id : null
                 }
             });
-
             if (!saved) {
                 return showToast('Could not save the bill. Please check the meter_readings table in Supabase.', 'error');
             }
-
             addAuditRow(currentUser ? currentUser.user_id : 'Staff', 'Meter Reader', 'Created New Bill', `${owner[0].full_name} (Acct ${selectedAcct}) - ₱${amount} (${period})`, 'blue');
 
             closeModal('createBillModal');
             showToast('Bill saved and sent to Admin for approval!', 'success');
         });
-
         function switchAdminTab(tab) {
             const tApprovals = document.getElementById('adminTabApprovals');
             const tUsers = document.getElementById('adminTabUsers');
@@ -2335,7 +2332,6 @@
                 loadAuditLogs();
             }
         }
-
         async function loadAdminData() {
             await markOverdueBills();
             const verifiedPayments = await dbFetch('payments', {
@@ -2425,7 +2421,6 @@
             } else {
                 billsTable.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">No new bills awaiting approval.</td></tr>';
             }
-
             const staffApprovedPayments = await dbFetch('payments', {
                 method: 'GET',
                 query: 'status=eq.Staff Verified&select=*'
@@ -2461,12 +2456,10 @@
                 document.getElementById('badgePendingApprovals').textContent = pendingBillsQueue.length;
                 paymentsTable.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">No staff-endorsed payments awaiting Admin approval.</td></tr>';
             }
-
             const cutoffBills = await dbFetch('bills', {
                 method: 'GET',
                 query: 'status=eq.Cut-Off Requested&select=*'
             });
-
             const cutoffsTable = document.getElementById('adminCutoffsTable');
             if (cutoffBills && Array.isArray(cutoffBills) && cutoffBills.length > 0) {
                 document.getElementById('admStatCutoffs').textContent = cutoffBills.length;
@@ -2492,7 +2485,6 @@
                 cutoffsTable.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400">No pending disconnection requests.</td></tr>';
             }
         }
-
         async function approveBillByAdmin(billId) {
             const approved = pendingBillsQueue.find(b => b.id === billId);
             if (!approved) return;
@@ -2518,7 +2510,6 @@
                 query: `reading_id=eq.${billId}`,
                 body: { status: 'Approved' }
             });
-
             const newBillId = (Array.isArray(published) && published[0]) ? published[0].bill_id : null;
             await notifyUser(targetUserId, `Your water bill for ${approved.period} (₱${approved.amount}) is now available. Due date: ${formatDateString(approved.dueDate)}. Tap to view your bill statement.${newBillId ? ' [BILL:' + newBillId + ']' : ''}`);
 
@@ -2532,12 +2523,10 @@
                     due_date: approved.dueDate
                 };
             }
-
             addAuditRow(currentUser ? currentUser.user_id : null, 'Admin', 'Approved New Bill', `Published bill for Account ${approved.accountNum} (₱${approved.amount})`, 'green');
             loadAdminData();
             showToast(`Bill (₱${approved.amount}) approved and published to Account #${approved.accountNum}. Resident notified.`, 'success');
         }
-
         async function adminApprovePayment(paymentId, userId, amount) {
             // Find the bill that is being paid: the resident's newest bill that is not Paid yet
             const openBills = await dbFetch('bills', {
@@ -2559,7 +2548,6 @@
             if (!verified || verified.length === 0) {
                 return showToast('Could not verify the payment. Please try again.', 'error');
             }
-
             // Only the status changes. The bill amount stays in the database as a record.
             const settled = await dbFetch('bills', {
                 method: 'PATCH',
@@ -2575,7 +2563,6 @@
                 });
                 return showToast('Could not mark the bill as Paid. Nothing was changed, please try again.', 'error');
             }
-
             await notifyUser(userId, `Your payment PAY-${paymentId} of ₱${amount} was approved. Your bill is now settled. Tap to view your payment receipt. [PAY:${paymentId}]`);
             const residentName = await getResidentName(userId);
             addPaymentLog('Admin Final Approval', 'System Admin', `Approved: Settled ₱${amount} for ${residentName} (BILL-${billId})`);
@@ -2592,7 +2579,6 @@
 
             loadAdminData();
         }
-
         async function adminRejectPayment(paymentId, userId) {
             const rejected = await dbFetch('payments', {
                 method: 'PATCH',
@@ -2602,7 +2588,6 @@
             if (!rejected || rejected.length === 0) {
                 return showToast('Could not reject the payment. Please try again.', 'error');
             }
-
             await notifyUser(userId, `NOTICE: Your payment PAY-${paymentId} was rejected by the Admin. Please contact the office or pay again.`);
             addPaymentLog('Admin Rejection', 'System Admin', `Admin rejected payment PAY-${paymentId} for ${await getResidentName(userId)}`);
             addAuditRow('admin_ormoc', 'Admin', 'Payment Rejected', `Admin rejected payment PAY-${paymentId}`, 'red');
@@ -2610,7 +2595,6 @@
 
             loadAdminData();
         }
-
         async function adminApproveCutoff(billId, userId) {
             await dbFetch('bills', {
                 method: 'PATCH',
@@ -2625,7 +2609,6 @@
                     message: 'URGENT: Your water service has been DISCONNECTED due to unpaid bills. Please pay your outstanding balance to request reconnection.'
                 }
             });
-
             const cutName = await getResidentName(userId);
             addPaymentLog('Water Cut-Off Authorized', 'System Admin', `Execution: Disconnected water supply for ${cutName}`);
             addAuditRow('admin_ormoc', 'Admin', 'Cut-Off Executed', `Authorized water supply disconnection for ${cutName}`, 'red');
@@ -2633,14 +2616,12 @@
 
             loadAdminData();
         }
-
         async function loadUserBill(userId) {
     await markOverdueBills();
     const bills = await dbFetch('bills', {
         method: 'GET',
         query: `user_id=eq.${userId}&order=created_at.desc&limit=1`
     });
-
     const statusBadge = document.getElementById('cBillStatus');
     const cardBtn = document.getElementById('payBillCardBtn');
     const viewBtn = document.getElementById('payBillViewBtn');
@@ -2661,7 +2642,6 @@
                 penaltyNote.classList.add('hidden');
             }
         }
-
         document.getElementById('cBalance').textContent = amtFormatted;
         document.getElementById('bAmount').textContent = amtFormatted;
         const discountAmt = earlyDiscountFor(activeUserBill);
@@ -3165,7 +3145,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 paymentInFlight = false;
             }
         }
-
         function switchStaffTab(tab) {
             const tabPayments = document.getElementById('staffPaymentsTab');
             const tabUnpaid = document.getElementById('staffUnpaidTab');
@@ -3185,7 +3164,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             }
         }
         let pendingDeleteUser = null;
-
         // Step 1: ask the Admin inside the app (no browser popup)
         function deleteUserByAdmin(userId, userName) {
             pendingDeleteUser = { userId, userName };
@@ -3193,7 +3171,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 `Are you sure you want to permanently delete "${userName}" (ID: ${userId}) from the database? This cannot be undone.`;
             openModal('deleteUserModal');
         }
-
         // Step 2: the Admin pressed Delete
         async function confirmDeleteUser() {
             if (!pendingDeleteUser) return;
@@ -3205,7 +3182,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 method: 'DELETE',
                 query: `user_id=eq.${userId}`
             });
-
             if (response !== null) {
                 addAuditRow(currentUser ? currentUser.user_id : null, 'Admin', 'User Deleted', `Deleted User ID ${userId} (${userName}) from users table`, 'red');
                 showToast(`User "${userName}" successfully deleted from database.`, 'success');
@@ -3214,14 +3190,12 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 showToast(`Failed to delete user ID ${userId}. Check foreign key constraints or Supabase policies.`, 'error');
             }
         }
-
         async function loadStaffData() {
             await markOverdueBills();
             const payments = await dbFetch('payments', {
                 method: 'GET',
                 query: 'status=eq.Pending&select=*'
             });
-
             const nameMap = await getUserNameMap();
             const queue = document.getElementById('staffQueue');
             const statPending = document.getElementById('statPending');
@@ -3254,12 +3228,10 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 statPending.textContent = '0';
                 queue.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">No pending resident payments in queue.</p>';
             }
-
             const unpaidBills = await dbFetch('bills', {
                 method: 'GET',
                 query: 'status=neq.Paid&select=*'
             });
-
             const unpaidQueue = document.getElementById('staffUnpaidQueue');
             const statUnpaid = document.getElementById('statUnpaid');
 
@@ -3292,7 +3264,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 unpaidQueue.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">All bills are settled!</p>';
             }
         }
-
         async function verifyPaymentAction(paymentId, userId, action) {
             if (!currentUser) {
                 showToast('Your session ended. Please log in again.', 'error');
@@ -3311,7 +3282,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 if (!endorsed || endorsed.length === 0) {
                     return showToast('Could not endorse the payment. Please try again.', 'error');
                 }
-
                 await notifyUser(userId, `Your payment PAY-${paymentId} was checked by staff and sent to the Admin for final approval.`);
                 addPaymentLog('Staff Endorsement', staffName, `Endorsed payment PAY-${paymentId} for Admin final approval`);
                 showToast('Staff verification complete! Forwarded to Admin for final approval.', 'success');
@@ -3325,16 +3295,13 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 if (!rejected || rejected.length === 0) {
                     return showToast('Could not reject the payment. Please try again.', 'error');
                 }
-
                 await notifyUser(userId, `NOTICE: Your payment PAY-${paymentId} was rejected by staff. Please check your details and pay again.`);
                 addPaymentLog('Staff Rejection', staffName, `Rejected payment PAY-${paymentId} for ${await getResidentName(userId)}`);
                 showToast('Payment rejected by Staff.', 'error');
                 addAuditRow(staffId, 'Meter Reader', 'Payment Rejected', `Staff rejected payment for ${await getResidentName(userId)}`, 'red');
             }
-
             loadStaffData();
         }
-
         async function issueCutoffWarning(billId, userId, actionType) {
             const staffName = currentUser ? currentUser.full_name : 'Staff';
             const staffId = currentUser ? currentUser.user_id : 'STF-2201';
@@ -3346,7 +3313,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     query: `bill_id=eq.${billId}`,
                     body: { status: 'Disconnection Warning' }
                 });
-
                 await dbFetch('notifications', {
                     method: 'POST',
                     body: {
@@ -3354,7 +3320,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                         message: 'WARNING: Your water bill is overdue. Please settle your account to prevent service disconnection.'
                     }
                 });
-
                 addPaymentLog('Warning Notice', staffName, `Issued disconnection warning for ${residentName}`);
                 showToast(`Disconnection Warning notice sent to ${residentName}!`, 'success');
                 addAuditRow(staffId, 'Meter Reader', 'Cut-Off Warning Sent', `Issued warning for ${residentName}`, 'red');
@@ -3364,7 +3329,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     query: `bill_id=eq.${billId}`,
                     body: { status: 'Cut-Off Requested' }
                 });
-
                 await dbFetch('notifications', {
                     method: 'POST',
                     body: {
@@ -3372,27 +3336,22 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                         message: 'NOTICE: Staff has recommended your water service for cut-off due to non-payment.'
                     }
                 });
-
                 addPaymentLog('Cut-Off Requested', staffName, `Requested Admin authorization to cut off water for ${residentName}`);
                 showToast(`Cut-off request forwarded to Admin for authorization.`, 'error');
                 addAuditRow(staffId, 'Meter Reader', 'Cut-Off Request Sent', `Requested Admin cut-off authorization for ${residentName}`, 'red');
             }
-
             loadStaffData();
         }
-
         async function loadUserNotifications() {
             const list = document.getElementById('notificationsList');
             if (!currentUser) {
                 list.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">Please log in as a Resident to view alerts.</p>';
                 return;
             }
-
             const notes = await dbFetch('notifications', {
                 method: 'GET',
                 query: `user_id=eq.${currentUser.user_id}&order=created_at.desc`
             });
-
             if (notes && Array.isArray(notes) && notes.length > 0) {
                 list.innerHTML = '';
                 notes.forEach(n => {
@@ -3424,19 +3383,16 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 list.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">No system notifications found.</p>';
             }
         }
-
         async function loadUserPayments() {
             const list = document.getElementById('historyList');
             if (!currentUser) {
                 list.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">Please log in as a Resident to view history.</p>';
                 return;
             }
-
             const payments = await dbFetch('payments', {
                 method: 'GET',
                 query: `user_id=eq.${currentUser.user_id}&order=payment_id.desc`
             });
-
             if (payments && Array.isArray(payments) && payments.length > 0) {
                 list.innerHTML = '';
                 payments.forEach(p => {
@@ -3463,7 +3419,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 list.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">No payment history recorded yet.</p>';
             }
         }
-
         // ---- Refresh button for the audit trail (does NOT delete anything in the database) ----
         const AUDIT_CUTOFF_KEY = 'orbisAuditCutoff';
         function getAuditCutoff() {
@@ -3488,7 +3443,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             await loadAuditLogs();
             showToast('Showing all audit records.', 'info');
         }
-
         async function loadAuditLogs() {
             let auditQuery = 'select=*&order=created_at.desc';
             const cutoff = getAuditCutoff();
@@ -3516,7 +3470,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                         const mi = String(d.getMinutes()).padStart(2, '0');
                         timeStr = `${yr}-${mo}-${da} ${hr}:${mi}`;
                     }
-
                     const act = log.action || '';
                     let badgeClass = 'bg-blue-100 text-blue-700';
                     if (act.includes('Login') || act.includes('Approved') || act.includes('Verified')) {
@@ -3529,7 +3482,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     } else if (act.includes('Registration') || act.includes('Initialization')) {
                         badgeClass = 'bg-green-100 text-green-700';
                     }
-
                     const userRole = ` (${normalizeRole(log.user_role)})`;
                     let userIdDisplay;
                     if (log.user_id && nameMap[log.user_id]) {
@@ -3539,7 +3491,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     } else {
                         userIdDisplay = `Unknown${userRole}`;
                     }
-
                     const row = document.createElement('tr');
                     row.className = 'border-b border-gray-100 hover:bg-gray-50/50 transition-colors';
                     row.innerHTML = `
@@ -3556,7 +3507,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 table.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-400">${emptyMsg}</td></tr>`;
             }
         }
-
         setInterval(() => {
             const now = new Date();
             let h = now.getHours() % 12 || 12;
