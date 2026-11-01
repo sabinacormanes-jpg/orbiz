@@ -850,6 +850,65 @@
                     </div>
 
                     <button id="stPayBtn" onclick="goToPay()" class="hidden w-full mt-4 bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">Pay Bill Now</button>
+                    <button id="stReceiptBtn" class="hidden w-full mt-4 bg-green-600 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform"><i class="fa-solid fa-receipt mr-2"></i>View Payment Receipt</button>
+                </div>
+                <div class="bottom-nav consumer-nav">
+                    <div class="nav-item" onclick="switchView('consumerDashView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('notificationsView')"><i class="fa-solid fa-bell text-lg"></i><span class="text-[10px] font-medium">Alerts</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('profileView')"><i class="fa-solid fa-user text-lg"></i><span class="text-[10px] font-medium">Profile</span><span class="nav-underline"></span></div>
+                </div>
+            </div>
+
+            <!-- PAYMENT RECEIPT VIEW (proof of payment, after Admin verifies the payment) -->
+            <div id="receiptView" class="view flex-col bg-orbis-light min-h-full pb-24">
+                <div class="sub-header">
+                    <button onclick="switchView(receiptBackView)" class="w-9 h-9 bg-white/15 rounded-full flex items-center justify-center text-white"><i class="fa-solid fa-chevron-left"></i></button>
+                    <h2 class="text-white font-bold font-display">Payment Receipt</h2>
+                </div>
+                <div class="px-4 pt-4">
+                    <div class="bg-white shadow-md px-4 py-5 relative font-mono text-[11px] text-gray-800 leading-relaxed">
+                        <span class="absolute top-4 right-3 border-2 border-green-600 text-green-600 font-extrabold text-sm px-2 py-0.5 rounded rotate-12">PAID</span>
+                        <div class="text-center">
+                            <div class="w-12 h-12 mx-auto rounded-full bg-orbis-navy flex items-center justify-center mb-1"><i class="fa-solid fa-droplet text-orbis-light"></i></div>
+                            <p class="text-lg font-extrabold tracking-wide">ORWASA</p>
+                            <p class="font-semibold">Ormoc Waterworks</p>
+                            <p class="font-semibold">System Administration</p>
+                            <p class="text-[10px]">Aunubing Street, Ormoc City, Leyte</p>
+                        </div>
+                        <p class="text-center font-extrabold text-sm tracking-wider mt-3 mb-2">PAYMENT RECEIPT</p>
+                        <div class="border-t border-dashed border-gray-400 my-2"></div>
+
+                        <div class="flex justify-between gap-3"><span>Receipt No.</span><span id="rcNo" class="font-bold">-</span></div>
+                        <div class="flex justify-between gap-3"><span>Payment date</span><span id="rcDate" class="font-bold text-right">-</span></div>
+                        <div class="flex justify-between gap-3"><span>Payment time</span><span id="rcTime" class="font-bold">-</span></div>
+
+                        <div class="border-t border-dashed border-gray-400 my-2"></div>
+                        <div class="flex justify-between gap-3"><span>Account No.</span><span id="rcAccountNo" class="font-bold text-right">-</span></div>
+                        <div class="flex justify-between gap-3"><span>Name</span><span id="rcName" class="font-bold text-right">-</span></div>
+                        <div class="flex justify-between gap-3"><span>Address</span><span id="rcAddress" class="font-bold text-right">-</span></div>
+                        <div class="flex justify-between gap-3"><span>Billing Period</span><span id="rcPeriod" class="font-bold text-right">-</span></div>
+
+                        <div class="border-t-2 border-double border-gray-400 my-2"></div>
+                        <div class="flex justify-between gap-3"><span>Water bill</span><span id="rcBill">0.00</span></div>
+                        <div id="rcPenaltyRow" class="hidden flex justify-between gap-3"><span>Surcharge</span><span id="rcPenalty">0.00</span></div>
+                        <div class="border-t-2 border-double border-gray-400 my-2"></div>
+                        <div class="flex justify-between gap-3 text-sm font-extrabold"><span>TOTAL PAID</span><span id="rcTotal">Php 0.00</span></div>
+                        <div class="border-t-2 border-double border-gray-400 my-2"></div>
+
+                        <div class="flex justify-between gap-3"><span>Payment method</span><span id="rcMethod" class="font-bold">-</span></div>
+                        <div class="flex justify-between gap-3"><span>Reference No.</span><span id="rcRef" class="font-bold">-</span></div>
+                        <div class="flex justify-between gap-3"><span>Status</span><span class="font-bold text-green-700">VERIFIED</span></div>
+
+                        <p class="text-center font-bold mt-4">THANK YOU FOR PAYING YOUR WATER BILL!</p>
+                        <p class="text-center text-[10px] mt-1">Keep this receipt as your proof of payment.</p>
+                        <div class="border-t border-dashed border-gray-400 my-2"></div>
+                        <div class="text-[10px]">
+                            <div class="flex justify-between gap-3"><span>Verified by</span><span class="font-bold">ORBIS SYSTEM ADMIN</span></div>
+                            <div class="flex justify-between gap-3"><span>Print date</span><span id="rcPrintDate">-</span></div>
+                            <div class="flex justify-between gap-3"><span>Print time</span><span id="rcPrintTime">-</span></div>
+                            <div class="flex justify-between gap-3"><span>ORBIS Ver.</span><span>1.0</span></div>
+                        </div>
+                    </div>
                 </div>
                 <div class="bottom-nav consumer-nav">
                     <div class="nav-item" onclick="switchView('consumerDashView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
@@ -1896,6 +1955,77 @@
             fcNote.textContent = `Based on your last ${recent.length} approved reading${recent.length > 1 ? 's' : ''}. The more bills you have, the better the estimate.`;
         }
 
+        // ---- Payment receipt (after the payment is verified) ----
+        let receiptBackView = 'paymentHistoryView';
+
+        async function openReceipt(paymentId, backView) {
+            if (!currentUser || typeof currentUser.user_id !== 'number') {
+                showToast('Please log in as a Resident to view your receipt.', 'error');
+                return;
+            }
+            receiptBackView = backView || 'paymentHistoryView';
+            const uid = currentUser.user_id;
+
+            const rows = await dbFetch('payments', { method: 'GET', query: `payment_id=eq.${paymentId}&user_id=eq.${uid}&limit=1` });
+            if (!rows || rows.length === 0) {
+                showToast('Receipt not found.', 'error');
+                return;
+            }
+            const pay = rows[0];
+            if (pay.status !== 'Verified') {
+                showToast('Your receipt will be ready once your payment is verified.', 'info');
+                return;
+            }
+
+            // the bill that was paid
+            let bill = null;
+            if (pay.bill_id) {
+                const b = await dbFetch('bills', { method: 'GET', query: `bill_id=eq.${pay.bill_id}&limit=1` });
+                if (b && b.length > 0) bill = b[0];
+            }
+            if (!bill && pay.created_at) {
+                // older payments have no bill id: use the newest paid bill made before the payment
+                const b = await dbFetch('bills', {
+                    method: 'GET',
+                    query: `user_id=eq.${uid}&status=eq.Paid&created_at=lt.${encodeURIComponent(pay.created_at)}&order=created_at.desc&limit=1`
+                });
+                if (b && b.length > 0) bill = b[0];
+            }
+
+            const money = n => (parseFloat(n) || 0).toFixed(2);
+            const setText = (id, v) => { document.getElementById(id).textContent = v; };
+            const paidAt = pay.created_at ? new Date(pay.created_at) : new Date();
+            const total = parseFloat(pay.amount) || 0;
+            const penalty = bill ? (parseFloat(bill.penalty) || 0) : 0;
+            const billAmount = bill ? (parseFloat(bill.amount) || 0) : total;
+
+            setText('rcNo', 'OR-' + String(pay.payment_id).padStart(6, '0'));
+            setText('rcDate', paidAt.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: '2-digit' }));
+            setText('rcTime', paidAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase());
+            setText('rcAccountNo', currentUser.water_account_number || '-');
+            setText('rcName', (currentUser.full_name || '-').toUpperCase());
+            setText('rcAddress', currentUser.address || 'Ormoc City');
+            setText('rcPeriod', bill && bill.billing_period ? bill.billing_period : '-');
+            setText('rcBill', money(billAmount));
+            setText('rcTotal', 'Php ' + money(total));
+            setText('rcMethod', pay.payment_method || '-');
+            setText('rcRef', pay.reference_number || '-');
+
+            const penaltyRow = document.getElementById('rcPenaltyRow');
+            if (penalty > 0) {
+                penaltyRow.classList.remove('hidden');
+                setText('rcPenalty', money(penalty));
+            } else {
+                penaltyRow.classList.add('hidden');
+            }
+
+            const now = new Date();
+            setText('rcPrintDate', now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: '2-digit' }));
+            setText('rcPrintTime', now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase());
+
+            switchView('receiptView');
+        }
+
         // ---- Bill statement (virtual bill) ----
         let statementBackView = 'consumerDashView';
         const DISCONNECTION_GRACE_DAYS = 5;
@@ -2004,6 +2134,27 @@
             // Pay button only for the newest unpaid bill
             const canPay = !isPaid && activeUserBill && activeUserBill.bill_id === bill.bill_id;
             document.getElementById('stPayBtn').classList.toggle('hidden', !canPay);
+
+            // a paid bill gets a link to its receipt
+            const receiptBtn = document.getElementById('stReceiptBtn');
+            receiptBtn.classList.add('hidden');
+            if (isPaid) {
+                let payRows = await dbFetch('payments', {
+                    method: 'GET',
+                    query: `user_id=eq.${uid}&bill_id=eq.${bill.bill_id}&status=eq.Verified&order=created_at.desc&limit=1`
+                });
+                if ((!payRows || payRows.length === 0) && bill.created_at) {
+                    // older payments were saved without a bill id: use the first verified payment after the bill was made
+                    payRows = await dbFetch('payments', {
+                        method: 'GET',
+                        query: `user_id=eq.${uid}&status=eq.Verified&created_at=gt.${encodeURIComponent(bill.created_at)}&order=created_at.asc&limit=1`
+                    });
+                }
+                if (payRows && payRows.length > 0) {
+                    receiptBtn.onclick = () => openReceipt(payRows[0].payment_id, 'billStatementView');
+                    receiptBtn.classList.remove('hidden');
+                }
+            }
 
             switchView('billStatementView');
         }
@@ -2320,12 +2471,14 @@
             if (!openBills || openBills.length === 0) {
                 return showToast('No unpaid bill was found for this resident. Payment was not approved.', 'error');
             }
-            const billId = openBills[0].bill_id;
+            let billId = openBills[0].bill_id;
+            const payRow = await dbFetch('payments', { method: 'GET', query: `payment_id=eq.${paymentId}&select=bill_id` });
+            if (payRow && payRow.length > 0 && payRow[0].bill_id) billId = payRow[0].bill_id;
 
             const verified = await dbFetch('payments', {
                 method: 'PATCH',
                 query: `payment_id=eq.${paymentId}`,
-                body: { status: 'Verified' }
+                body: { status: 'Verified', bill_id: billId }
             });
             if (!verified || verified.length === 0) {
                 return showToast('Could not verify the payment. Please try again.', 'error');
@@ -2347,7 +2500,7 @@
                 return showToast('Could not mark the bill as Paid. Nothing was changed, please try again.', 'error');
             }
 
-            await notifyUser(userId, `Your payment PAY-${paymentId} of ₱${amount} was approved. Your bill is now settled. Thank you!`);
+            await notifyUser(userId, `Your payment PAY-${paymentId} of ₱${amount} was approved. Your bill is now settled. Tap to view your payment receipt. [PAY:${paymentId}]`);
             const residentName = await getResidentName(userId);
             addPaymentLog('Admin Final Approval', 'System Admin', `Approved: Settled ₱${amount} for ${residentName} (BILL-${billId})`);
 
@@ -2876,6 +3029,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     amount: payAmt,
                     payment_method: 'GCash',
                     reference_number: refNo,
+                    bill_id: activeUserBill.bill_id,
                     status: 'Pending'
                 }
             });
@@ -3136,14 +3290,19 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     card.className = 'bg-white rounded-2xl p-4 shadow-sm border-l-4 ' + (isWarning ? 'border-red-500' : (isGood ? 'border-green-500' : 'border-orbis-navy'));
                     const rawMsg = n.message || 'System Notification';
                     const tagMatch = rawMsg.match(/\[BILL:(\d+)\]/);
-                    const shownMsg = rawMsg.replace(/\s*\[BILL:\d+\]/, '');
+                    const payMatch = rawMsg.match(/\[PAY:(\d+)\]/);
+                    const shownMsg = rawMsg.replace(/\s*\[(BILL|PAY):\d+\]/g, '');
                     const isBillNote = !!tagMatch || /water bill for .* is now available/i.test(rawMsg);
                     card.innerHTML = `
                         <p class="text-xs text-gray-700 font-medium leading-relaxed">${shownMsg}</p>
                         ${isBillNote ? '<p class="text-[11px] text-blue-600 font-bold mt-2"><i class="fa-regular fa-file-lines mr-1"></i>View bill statement</p>' : ''}
+                        ${payMatch ? '<p class="text-[11px] text-green-600 font-bold mt-2"><i class="fa-solid fa-receipt mr-1"></i>View payment receipt</p>' : ''}
                         <p class="text-[10px] text-gray-400 mt-2">${n.created_at ? n.created_at.slice(0, 16).replace('T', ' ') : 'Recent'}</p>
                     `;
-                    if (isBillNote) {
+                    if (payMatch) {
+                        card.classList.add('cursor-pointer');
+                        card.onclick = () => openReceipt(parseInt(payMatch[1]), 'notificationsView');
+                    } else if (isBillNote) {
                         card.classList.add('cursor-pointer');
                         card.onclick = () => openBillStatement(tagMatch ? parseInt(tagMatch[1]) : null, 'notificationsView');
                     }
@@ -3171,10 +3330,15 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 payments.forEach(p => {
                     const card = document.createElement('div');
                     card.className = 'bg-orbis-navy rounded-2xl p-4 flex items-center justify-between text-white';
+                    if (p.status === 'Verified') {
+                        card.classList.add('cursor-pointer');
+                        card.onclick = () => openReceipt(p.payment_id, 'paymentHistoryView');
+                    }
                     card.innerHTML = `
                         <div>
                             <p class="font-bold text-sm font-display">${p.payment_method}</p>
                             <p class="text-white/50 text-[11px]">${p.reference_number}</p>
+                            ${p.status === 'Verified' ? '<p class="text-blue-200 text-[10px] font-bold mt-1"><i class="fa-solid fa-receipt mr-1"></i>View receipt</p>' : ''}
                         </div>
                         <div class="text-right">
                             <p class="font-bold text-sm mb-1">₱${p.amount}</p>
