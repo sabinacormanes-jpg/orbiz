@@ -770,6 +770,8 @@
                     <div class="bg-orbis-navy rounded-2xl p-5 shadow-lg mb-4 text-center">
                         <p class="text-white/70 text-xs font-semibold uppercase tracking-wide">Total amount due</p>
                         <h1 class="text-3xl font-extrabold text-white mt-1" id="bAmount">₱405.00</h1>
+                        <p id="bPenaltyNote" class="hidden mt-1 text-amber-300 text-[11px] font-semibold"></p>
+                        <p id="bDiscountNote" class="hidden mt-1 text-green-300 text-[11px] font-semibold"></p>
                         <span class="inline-block mt-2 bg-white/15 text-white text-xs font-semibold px-3 py-1 rounded-full" id="bPeriodBadge">Period: October 2026</span>
                     </div>
 
@@ -834,6 +836,7 @@
 
                         <p class="text-[10px]">NOTE:</p>
                         <p class="text-[10px]">* Present this bill upon payment.</p>
+                        <p class="text-[10px]" id="stDiscountNote">* Five percent (5%) discount if paid before due date.</p>
                         <p class="text-[10px]" id="stSurchargeNote">* A surcharge shall be imposed after due date.</p>
                         <div id="stNoticeBox" class="border-2 border-red-500 p-2 mt-2 text-[10px] font-bold">
                             * This serves as your NOTICE OF DISCONNECTION if not paid after <span id="stNoticeDate">-</span>.
@@ -890,6 +893,7 @@
 
                         <div class="border-t-2 border-double border-gray-400 my-2"></div>
                         <div class="flex justify-between gap-3"><span>Water bill</span><span id="rcBill">0.00</span></div>
+                        <div id="rcDiscountRow" class="hidden flex justify-between gap-3"><span id="rcDiscountLabel">Early-payment discount</span><span id="rcDiscount">0.00</span></div>
                         <div id="rcPenaltyRow" class="hidden flex justify-between gap-3"><span>Surcharge</span><span id="rcPenalty">0.00</span></div>
                         <div class="border-t-2 border-double border-gray-400 my-2"></div>
                         <div class="flex justify-between gap-3 text-sm font-extrabold"><span>TOTAL PAID</span><span id="rcTotal">Php 0.00</span></div>
@@ -963,6 +967,7 @@
                     <div class="bg-orbis-navy rounded-2xl p-5 shadow-lg mb-5 text-center">
                         <p class="text-white/70 text-xs font-semibold uppercase tracking-wide">Total amount to pay</p>
                         <h1 class="text-3xl font-extrabold text-white mt-1" id="payAmount">₱405.00</h1>
+                        <p id="payDiscountNote" class="hidden mt-1 text-green-300 text-[11px] font-semibold"></p>
                     </div>
                     <button onclick="startPayment()" class="w-full bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">Submit Payment</button>
                 </div>
@@ -1603,7 +1608,7 @@
             if (bill) {
                 if (bill.status === 'Paid') {
                     status = 'Paid';
-                } else if (['Disconnection Warning', 'Cut-Off Requested', 'Cut-Off'].includes(bill.status)) {
+                } else if (['Overdue', 'Disconnection Warning', 'Cut-Off Requested', 'Cut-Off'].includes(bill.status)) {
                     status = 'Overdue';
                     balance = parseFloat(bill.amount) || 0;
                 } else {
@@ -1955,6 +1960,48 @@
             fcNote.textContent = `Based on your last ${recent.length} approved reading${recent.length > 1 ? 's' : ''}. The more bills you have, the better the estimate.`;
         }
 
+        // ---- Overdue bills: after the due date, an Unpaid bill becomes Overdue and gets the surcharge ----
+        let overdueCheckRunning = false;
+
+        async function markOverdueBills() {
+            if (overdueCheckRunning) return;
+            overdueCheckRunning = true;
+            try {
+                await loadRates();
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);   // a bill is late only after its due date has passed
+                const late = await dbFetch('bills', {
+                    method: 'GET',
+                    query: `status=eq.Unpaid&due_date=lt.${encodeURIComponent(today.toISOString())}&select=bill_id,user_id,amount,billing_period,due_date`
+                });
+                if (!late || !Array.isArray(late) || late.length === 0) return;
+
+                for (const b of late) {
+                    // a payment sent on or before the due date is still waiting for approval: no surcharge
+                    const waiting = await dbFetch('payments', {
+                        method: 'GET',
+                        query: `user_id=eq.${b.user_id}&status=in.(Pending,Staff Verified)&select=created_at`
+                    });
+                    if (waiting && waiting.some(w => !isAfterDueDate(w.created_at, b.due_date))) continue;
+
+                    const base = parseFloat(b.amount) || 0;
+                    const penalty = Math.round(base * currentRates.penalty_percent) / 100;
+                    // only the first one to change the bill wins, so the resident is not notified twice
+                    const updated = await dbFetch('bills', {
+                        method: 'PATCH',
+                        query: `bill_id=eq.${b.bill_id}&status=eq.Unpaid`,
+                        body: { status: 'Overdue', penalty: penalty }
+                    });
+                    if (updated && updated.length > 0) {
+                        await notifyUser(b.user_id, `NOTICE: Your water bill for ${b.billing_period} is now OVERDUE. A ${currentRates.penalty_percent}% surcharge (₱${penalty.toFixed(2)}) was added. Total amount due: ₱${(base + penalty).toFixed(2)}. Tap to view your bill statement. [BILL:${b.bill_id}]`);
+                        addPaymentLog('Overdue Surcharge Applied', 'System', `BILL-${b.bill_id} is overdue: added ${currentRates.penalty_percent}% surcharge (₱${penalty.toFixed(2)})`);
+                    }
+                }
+            } finally {
+                overdueCheckRunning = false;
+            }
+        }
+
         // ---- Payment receipt (after the payment is verified) ----
         let receiptBackView = 'paymentHistoryView';
 
@@ -1998,6 +2045,9 @@
             const total = parseFloat(pay.amount) || 0;
             const penalty = bill ? (parseFloat(bill.penalty) || 0) : 0;
             const billAmount = bill ? (parseFloat(bill.amount) || 0) : total;
+            // the discount was used when the amount paid matches the bill minus 5%
+            const expDiscount = Math.round(billAmount * EARLY_DISCOUNT_PERCENT) / 100;
+            const hadDiscount = !!bill && expDiscount > 0 && Math.abs(total - (billAmount - expDiscount + penalty)) < 0.011;
 
             setText('rcNo', 'OR-' + String(pay.payment_id).padStart(6, '0'));
             setText('rcDate', paidAt.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: '2-digit' }));
@@ -2007,6 +2057,14 @@
             setText('rcAddress', currentUser.address || 'Ormoc City');
             setText('rcPeriod', bill && bill.billing_period ? bill.billing_period : '-');
             setText('rcBill', money(billAmount));
+            const discRow = document.getElementById('rcDiscountRow');
+            if (hadDiscount) {
+                discRow.classList.remove('hidden');
+                setText('rcDiscountLabel', `Early-payment discount (${EARLY_DISCOUNT_PERCENT}%)`);
+                setText('rcDiscount', '-' + money(expDiscount));
+            } else {
+                discRow.classList.add('hidden');
+            }
             setText('rcTotal', 'Php ' + money(total));
             setText('rcMethod', pay.payment_method || '-');
             setText('rcRef', pay.reference_number || '-');
@@ -2029,6 +2087,22 @@
         // ---- Bill statement (virtual bill) ----
         let statementBackView = 'consumerDashView';
         const DISCONNECTION_GRACE_DAYS = 5;
+        const EARLY_DISCOUNT_PERCENT = 5;
+
+        // true when that day is after the due date (same rule the overdue check uses)
+        function isAfterDueDate(dateValue, dueDateStr) {
+            const d = new Date(dateValue);
+            d.setHours(0, 0, 0, 0);
+            return d.getTime() > new Date(dueDateStr).getTime();
+        }
+
+        // 5% discount when an Unpaid bill is paid on or before its due date
+        function earlyDiscountFor(bill) {
+            if (!bill || bill.status !== 'Unpaid' || !bill.due_date) return 0;
+            if ((parseFloat(bill.penalty) || 0) > 0) return 0;
+            if (isAfterDueDate(new Date(), bill.due_date)) return 0;
+            return Math.round((parseFloat(bill.amount) || 0) * EARLY_DISCOUNT_PERCENT) / 100;
+        }
 
         async function openBillStatement(billId, backView) {
             if (!currentUser || typeof currentUser.user_id !== 'number') {
@@ -2121,6 +2195,7 @@
             setText('stDueDate', formatDateString(bill.due_date));
             setText('stDiscDate', formatDateString(discDate.toISOString()));
             setText('stNoticeDate', formatDateString(discDate.toISOString()));
+            setText('stDiscountNote', `* ${EARLY_DISCOUNT_PERCENT}% discount if paid before due date.`);
             setText('stSurchargeNote', `* Surcharge of ${currentRates.penalty_percent}% shall be imposed after due date.`);
 
             document.getElementById('stNoticeBox').classList.toggle('hidden', isPaid);
@@ -2262,6 +2337,7 @@
         }
 
         async function loadAdminData() {
+            await markOverdueBills();
             const verifiedPayments = await dbFetch('payments', {
                 method: 'GET',
                 query: 'status=eq.Verified&select=amount'
@@ -2559,6 +2635,7 @@
         }
 
         async function loadUserBill(userId) {
+    await markOverdueBills();
     const bills = await dbFetch('bills', {
         method: 'GET',
         query: `user_id=eq.${userId}&order=created_at.desc&limit=1`
@@ -2571,13 +2648,46 @@
     if (bills && bills.length > 0) {
         activeUserBill = bills[0];
         const isPaid = activeUserBill.status === 'Paid';
-        const billAmt = isPaid ? 0 : (parseFloat(activeUserBill.amount) || 0.00);
+        const penaltyAmt = isPaid ? 0 : (parseFloat(activeUserBill.penalty) || 0);
+        const billAmt = isPaid ? 0 : ((parseFloat(activeUserBill.amount) || 0.00) + penaltyAmt);
         const amtFormatted = "₱" + billAmt.toFixed(2);
+
+        const penaltyNote = document.getElementById('bPenaltyNote');
+        if (penaltyNote) {
+            if (penaltyAmt > 0) {
+                penaltyNote.textContent = `Includes ₱${penaltyAmt.toFixed(2)} late-payment surcharge`;
+                penaltyNote.classList.remove('hidden');
+            } else {
+                penaltyNote.classList.add('hidden');
+            }
+        }
 
         document.getElementById('cBalance').textContent = amtFormatted;
         document.getElementById('bAmount').textContent = amtFormatted;
-        document.getElementById('payAmount').textContent = amtFormatted;
-        document.getElementById('confAmount').textContent = amtFormatted;
+        const discountAmt = earlyDiscountFor(activeUserBill);
+        const toPayFormatted = "₱" + (billAmt - discountAmt).toFixed(2);
+        document.getElementById('payAmount').textContent = toPayFormatted;
+        document.getElementById('confAmount').textContent = toPayFormatted;
+
+        const discDueText = activeUserBill.due_date ? formatDateString(activeUserBill.due_date) : '';
+        const bDiscNote = document.getElementById('bDiscountNote');
+        if (bDiscNote) {
+            if (discountAmt > 0) {
+                bDiscNote.textContent = `Pay on or before ${discDueText} and save ₱${discountAmt.toFixed(2)} (${EARLY_DISCOUNT_PERCENT}% discount)`;
+                bDiscNote.classList.remove('hidden');
+            } else {
+                bDiscNote.classList.add('hidden');
+            }
+        }
+        const payDiscNote = document.getElementById('payDiscountNote');
+        if (payDiscNote) {
+            if (discountAmt > 0) {
+                payDiscNote.textContent = `Includes ${EARLY_DISCOUNT_PERCENT}% early-payment discount (-₱${discountAmt.toFixed(2)})`;
+                payDiscNote.classList.remove('hidden');
+            } else {
+                payDiscNote.classList.add('hidden');
+            }
+        }
 
         if (activeUserBill.billing_period) {
             const periodEl = document.getElementById('cPeriodLabel');
@@ -2629,7 +2739,7 @@
             }
         } else {
             statusBadge.textContent = activeUserBill.status || 'Unpaid';
-            if (activeUserBill.status === 'Disconnection Warning' || activeUserBill.status === 'Cut-Off Requested') {
+            if (activeUserBill.status === 'Overdue' || activeUserBill.status === 'Disconnection Warning' || activeUserBill.status === 'Cut-Off Requested') {
                 statusBadge.className = 'bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse';
             } else {
                 statusBadge.className = 'bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full';
@@ -3020,7 +3130,8 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             }
 
             const refNo = "TXN-" + Math.floor(100000000 + Math.random() * 900000000);
-            const payAmt = parseFloat(activeUserBill.amount) || 0;
+            const discountAmt = earlyDiscountFor(activeUserBill);
+            const payAmt = (parseFloat(activeUserBill.amount) || 0) + (parseFloat(activeUserBill.penalty) || 0) - discountAmt;
 
             const saved = await dbFetch('payments', {
                 method: 'POST',
@@ -3039,7 +3150,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
 
             document.getElementById('confRef').textContent = refNo;
 
-            await notifyUser(payerId, `Your payment of ₱${payAmt.toFixed(2)} (Ref: ${refNo}) was submitted. Waiting for staff review.`);
+            await notifyUser(payerId, `Your payment of ₱${payAmt.toFixed(2)} (Ref: ${refNo}) was submitted${discountAmt > 0 ? ` with a ${EARLY_DISCOUNT_PERCENT}% early-payment discount (₱${discountAmt.toFixed(2)} off)` : ''}. Waiting for staff review.`);
 
             await addPaymentLog(
                 'Submit Payment',
@@ -3105,6 +3216,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
         }
 
         async function loadStaffData() {
+            await markOverdueBills();
             const payments = await dbFetch('payments', {
                 method: 'GET',
                 query: 'status=eq.Pending&select=*'
@@ -3156,13 +3268,13 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 unpaidQueue.innerHTML = '';
                 unpaidBills.forEach(b => {
                     const card = document.createElement('div');
-                    card.className = 'bg-white rounded-2xl p-4 shadow-sm mb-3 border-l-4 ' + (b.status === 'Disconnection Warning' || b.status === 'Cut-Off Requested' || b.status === 'Cut-Off' ? 'border-red-500' : 'border-amber-400');
+                    card.className = 'bg-white rounded-2xl p-4 shadow-sm mb-3 border-l-4 ' + (['Overdue', 'Disconnection Warning', 'Cut-Off Requested', 'Cut-Off'].includes(b.status) ? 'border-red-500' : 'border-amber-400');
                     card.innerHTML = `
                         <div class="flex justify-between items-start mb-1">
                             <div>
                                 <p class="text-orbis-navy font-bold text-sm font-display">${nameMap[b.user_id] || 'Resident #' + b.user_id}</p>
                             </div>
-                            <span class="text-xs font-bold px-2 py-0.5 rounded-full ${b.status === 'Disconnection Warning' || b.status === 'Cut-Off Requested' || b.status === 'Cut-Off' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}">${b.status}</span>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded-full ${['Overdue', 'Disconnection Warning', 'Cut-Off Requested', 'Cut-Off'].includes(b.status) ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}">${b.status}</span>
                         </div>
                         <div class="flex gap-2 mt-2">
                             <button onclick="issueCutoffWarning(${b.bill_id}, ${b.user_id}, 'warning')" class="flex-1 py-2 rounded-lg bg-amber-500 text-white text-[11px] font-bold">
