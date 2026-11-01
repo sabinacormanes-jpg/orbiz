@@ -718,7 +718,7 @@
                 </div>
 
                 <div class="px-5 -mt-2 relative z-10">
-                    <div class="bg-orbis-navy rounded-2xl p-5 shadow-lg mb-4" id="billCardContainer">
+                    <div class="bg-orbis-navy rounded-2xl p-5 shadow-lg mb-4 cursor-pointer" id="billCardContainer" onclick="if (!event.target.closest('button')) openBillStatement(null, 'consumerDashView')">
                         <div class="flex justify-between items-start">
                             <p class="text-white/70 text-xs font-semibold uppercase tracking-wide">Current Water Bill</p>
                             <span class="bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full" id="cBillStatus">Unpaid</span>
@@ -729,6 +729,7 @@
                             <i class="fa-solid fa-droplet text-white/50 text-2xl mb-1"></i>
                         </div>
                         <p class="text-white/60 text-xs mt-1" id="cDueLine">Due Date: <span id="cDueDate" class="font-bold text-white">2026-11-15</span></p>
+                        <p class="text-white/40 text-[10px] mt-2"><i class="fa-regular fa-file-lines mr-1"></i>Tap to view your bill statement</p>
                         <button id="payBillCardBtn" onclick="switchView('billView')" class="mt-4 w-full bg-white text-orbis-navy font-bold py-2.5 rounded-xl active:scale-95 transition-transform text-sm">Pay Bill Now</button>
                     </div>
 
@@ -778,10 +779,80 @@
                         <div class="flex justify-between"><span class="text-gray-500">Rate Status</span><span class="font-bold text-green-600">Standard Ormoc City Tariff</span></div>
                     </div>
 
+                    <button onclick="openBillStatement(null, 'billView')" class="w-full bg-white border border-orbis-navy/20 text-orbis-navy font-bold py-3 rounded-xl mb-3 active:scale-95 transition-transform"><i class="fa-regular fa-file-lines mr-2"></i>View Bill Statement</button>
                     <button id="payBillViewBtn" onclick="goToPay()" class="w-full bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">Pay Bill Now</button>
                 </div>
                 <div class="bottom-nav consumer-nav">
                     <div class="nav-item active" onclick="switchView('consumerDashView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('notificationsView')"><i class="fa-solid fa-bell text-lg"></i><span class="text-[10px] font-medium">Alerts</span><span class="nav-underline"></span></div>
+                    <div class="nav-item" onclick="switchView('profileView')"><i class="fa-solid fa-user text-lg"></i><span class="text-[10px] font-medium">Profile</span><span class="nav-underline"></span></div>
+                </div>
+            </div>
+
+            <!-- BILL STATEMENT VIEW (virtual bill, like the printed ORWASA bill) -->
+            <div id="billStatementView" class="view flex-col bg-orbis-light min-h-full pb-24">
+                <div class="sub-header">
+                    <button onclick="switchView(statementBackView)" class="w-9 h-9 bg-white/15 rounded-full flex items-center justify-center text-white"><i class="fa-solid fa-chevron-left"></i></button>
+                    <h2 class="text-white font-bold font-display">Bill Statement</h2>
+                </div>
+                <div class="px-4 pt-4">
+                    <div class="bg-white shadow-md px-4 py-5 relative font-mono text-[11px] text-gray-800 leading-relaxed">
+                        <span id="stPaidStamp" class="hidden absolute top-4 right-3 border-2 border-green-600 text-green-600 font-extrabold text-sm px-2 py-0.5 rounded rotate-12">PAID</span>
+                        <div class="text-center">
+                            <div class="w-12 h-12 mx-auto rounded-full bg-orbis-navy flex items-center justify-center mb-1"><i class="fa-solid fa-droplet text-orbis-light"></i></div>
+                            <p class="text-lg font-extrabold tracking-wide">ORWASA</p>
+                            <p class="font-semibold">Ormoc Waterworks</p>
+                            <p class="font-semibold">System Administration</p>
+                            <p class="text-[10px]">Aunubing Street, Ormoc City, Leyte</p>
+                        </div>
+                        <p class="text-center font-extrabold text-sm tracking-wider mt-3 mb-2">WATER BILL STATEMENT</p>
+                        <div class="border-t border-dashed border-gray-400 my-2"></div>
+
+                        <div class="flex justify-between gap-3"><span>Account No.</span><span id="stAccountNo" class="font-bold text-right">-</span></div>
+                        <div class="flex justify-between gap-3"><span>Name</span><span id="stName" class="font-bold text-right">-</span></div>
+                        <div class="flex justify-between gap-3"><span>Address</span><span id="stAddress" class="font-bold text-right">-</span></div>
+                        <div class="flex justify-between gap-3"><span>Classification</span><span class="font-bold text-right">Residential</span></div>
+
+                        <div class="border-t border-dashed border-gray-400 my-2"></div>
+                        <div class="flex justify-between gap-3"><span>Billing Period</span><span id="stPeriod" class="font-bold text-right">-</span></div>
+                        <div class="flex justify-between gap-3"><span>Present Rdg.</span><span id="stPresent" class="font-bold">-</span></div>
+                        <div class="flex justify-between gap-3"><span>Previous Rdg.</span><span id="stPrevious" class="font-bold">-</span></div>
+                        <div class="flex justify-between gap-3"><span>Cons. (cu.m.)</span><span id="stCons" class="font-bold">-</span></div>
+
+                        <div class="border-t-2 border-double border-gray-400 my-2"></div>
+                        <div class="flex justify-between gap-3 font-bold"><span>DUE FOR THIS READING</span><span id="stDue">0.00</span></div>
+                        <div id="stPenaltyRow" class="hidden flex justify-between gap-3 font-bold"><span>SURCHARGE</span><span id="stPenalty">0.00</span></div>
+                        <div class="flex justify-between gap-3 font-bold"><span>TOTAL UNPAID AMOUNT</span><span id="stUnpaid">0.00</span></div>
+                        <div class="border-t-2 border-double border-gray-400 my-2"></div>
+                        <div class="flex justify-between gap-3 text-sm font-extrabold"><span>TOTAL AMOUNT DUE</span><span id="stTotal">Php 0.00</span></div>
+                        <div class="border-t-2 border-double border-gray-400 my-2"></div>
+
+                        <div class="border-2 border-pink-400 p-2 my-3 font-bold">
+                            <div class="flex justify-between gap-3"><span>DUE DATE</span><span id="stDueDate">-</span></div>
+                            <div class="flex justify-between gap-3"><span>DISCONNECTION DATE</span><span id="stDiscDate">-</span></div>
+                        </div>
+
+                        <p class="text-[10px]">NOTE:</p>
+                        <p class="text-[10px]">* Present this bill upon payment.</p>
+                        <p class="text-[10px]" id="stSurchargeNote">* A surcharge shall be imposed after due date.</p>
+                        <div id="stNoticeBox" class="border-2 border-red-500 p-2 mt-2 text-[10px] font-bold">
+                            * This serves as your NOTICE OF DISCONNECTION if not paid after <span id="stNoticeDate">-</span>.
+                        </div>
+
+                        <p class="text-center font-bold mt-4">THIS IS NOT AN OFFICIAL RECEIPT</p>
+                        <div class="border-t border-dashed border-gray-400 my-2"></div>
+                        <div class="text-[10px]">
+                            <div class="flex justify-between gap-3"><span>Meter Reader</span><span id="stReader" class="font-bold text-right">-</span></div>
+                            <div class="flex justify-between gap-3"><span>Print date</span><span id="stPrintDate">-</span></div>
+                            <div class="flex justify-between gap-3"><span>Print time</span><span id="stPrintTime">-</span></div>
+                            <div class="flex justify-between gap-3"><span>ORBIS Ver.</span><span>1.0</span></div>
+                        </div>
+                    </div>
+
+                    <button id="stPayBtn" onclick="goToPay()" class="hidden w-full mt-4 bg-orbis-navy text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">Pay Bill Now</button>
+                </div>
+                <div class="bottom-nav consumer-nav">
+                    <div class="nav-item" onclick="switchView('consumerDashView')"><i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span><span class="nav-underline"></span></div>
                     <div class="nav-item" onclick="switchView('notificationsView')"><i class="fa-solid fa-bell text-lg"></i><span class="text-[10px] font-medium">Alerts</span><span class="nav-underline"></span></div>
                     <div class="nav-item" onclick="switchView('profileView')"><i class="fa-solid fa-user text-lg"></i><span class="text-[10px] font-medium">Profile</span><span class="nav-underline"></span></div>
                 </div>
@@ -1325,6 +1396,8 @@
                 loadUserPayments();
             } else if (viewId === 'waterUsageView') {
                 loadUsageForecast();
+            } else if (viewId === 'consumerDashView') {
+                if (currentUser && typeof currentUser.user_id === 'number') loadUserBill(currentUser.user_id);
             }
         }
 
@@ -1823,6 +1896,118 @@
             fcNote.textContent = `Based on your last ${recent.length} approved reading${recent.length > 1 ? 's' : ''}. The more bills you have, the better the estimate.`;
         }
 
+        // ---- Bill statement (virtual bill) ----
+        let statementBackView = 'consumerDashView';
+        const DISCONNECTION_GRACE_DAYS = 5;
+
+        async function openBillStatement(billId, backView) {
+            if (!currentUser || typeof currentUser.user_id !== 'number') {
+                showToast('Please log in as a Resident to view your bill statement.', 'error');
+                return;
+            }
+            statementBackView = backView || 'consumerDashView';
+            const uid = currentUser.user_id;
+
+            // make sure we have the newest bill (a new one may have been approved after login)
+            await loadUserBill(uid);
+
+            let bill = null;
+            if (billId) {
+                const rows = await dbFetch('bills', { method: 'GET', query: `bill_id=eq.${billId}&user_id=eq.${uid}&limit=1` });
+                if (rows && rows.length > 0) bill = rows[0];
+            }
+            if (!bill) {
+                const rows = await dbFetch('bills', { method: 'GET', query: `user_id=eq.${uid}&order=created_at.desc&limit=1` });
+                if (rows && rows.length > 0) bill = rows[0];
+            }
+            if (!bill) {
+                showToast('No bill statement available yet.', 'info');
+                return;
+            }
+
+            await loadRates();
+            const money = n => (parseFloat(n) || 0).toFixed(2);
+            const isPaid = bill.status === 'Paid';
+
+            // readings that belong to this bill (same user and billing period)
+            let reading = null;
+            if (bill.billing_period) {
+                const r = await dbFetch('meter_readings', {
+                    method: 'GET',
+                    query: `user_id=eq.${uid}&billing_period=eq.${encodeURIComponent(bill.billing_period)}&order=created_at.desc&limit=1`
+                });
+                if (r && r.length > 0) reading = r[0];
+            }
+
+            // older bills that are still unpaid
+            let prevUnpaid = 0;
+            if (bill.created_at) {
+                const older = await dbFetch('bills', {
+                    method: 'GET',
+                    query: `user_id=eq.${uid}&status=neq.Paid&bill_id=neq.${bill.bill_id}&created_at=lt.${encodeURIComponent(bill.created_at)}&select=amount,penalty`
+                });
+                if (older && Array.isArray(older)) {
+                    older.forEach(o => { prevUnpaid += (parseFloat(o.amount) || 0) + (parseFloat(o.penalty) || 0); });
+                }
+            }
+
+            // name of the meter reader who made the reading
+            let readerName = 'ORWASA Meter Reader';
+            if (reading && typeof reading.created_by === 'number') {
+                const nm = await getResidentName(reading.created_by);
+                if (!nm.startsWith('User ')) readerName = nm;
+            }
+
+            const amount = parseFloat(bill.amount) || 0;
+            const penalty = parseFloat(bill.penalty) || 0;
+            const totalDue = (isPaid ? 0 : amount + penalty) + prevUnpaid;
+
+            const used = (reading && isFinite(parseFloat(reading.present_reading) - parseFloat(reading.previous_reading)))
+                ? (parseFloat(reading.present_reading) - parseFloat(reading.previous_reading))
+                : parseFloat(bill.consumption);
+
+            const setText = (id, v) => { document.getElementById(id).textContent = v; };
+            setText('stAccountNo', currentUser.water_account_number || '-');
+            setText('stName', (currentUser.full_name || '-').toUpperCase());
+            setText('stAddress', currentUser.address || 'Ormoc City');
+            setText('stPeriod', bill.billing_period || '-');
+            setText('stPresent', reading ? reading.present_reading : 'N/A');
+            setText('stPrevious', reading ? reading.previous_reading : 'N/A');
+            setText('stCons', isNaN(used) ? 'N/A' : used.toFixed(1));
+            setText('stDue', money(amount));
+            setText('stUnpaid', money(prevUnpaid));
+            setText('stTotal', 'Php ' + money(totalDue));
+
+            const penaltyRow = document.getElementById('stPenaltyRow');
+            if (penalty > 0) {
+                penaltyRow.classList.remove('hidden');
+                setText('stPenalty', money(penalty));
+            } else {
+                penaltyRow.classList.add('hidden');
+            }
+
+            const discDate = new Date(bill.due_date);
+            discDate.setDate(discDate.getDate() + DISCONNECTION_GRACE_DAYS);
+            setText('stDueDate', formatDateString(bill.due_date));
+            setText('stDiscDate', formatDateString(discDate.toISOString()));
+            setText('stNoticeDate', formatDateString(discDate.toISOString()));
+            setText('stSurchargeNote', `* Surcharge of ${currentRates.penalty_percent}% shall be imposed after due date.`);
+
+            document.getElementById('stNoticeBox').classList.toggle('hidden', isPaid);
+            document.getElementById('stPaidStamp').classList.toggle('hidden', !isPaid);
+
+            setText('stReader', readerName.toUpperCase());
+            const now = new Date();
+            setText('stPrintDate', now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: '2-digit' }));
+            setText('stPrintTime', now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase());
+
+            // Pay button only for the newest unpaid bill
+            const canPay = !isPaid && activeUserBill && activeUserBill.bill_id === bill.bill_id;
+            document.getElementById('stPayBtn').classList.toggle('hidden', !canPay);
+
+            switchView('billStatementView');
+        }
+
         function computeBillFromReadings() {
             const prev = parseFloat(document.getElementById('billPrevReading').value);
             const pres = parseFloat(document.getElementById('billPresReading').value);
@@ -2107,7 +2292,8 @@
                 body: { status: 'Approved' }
             });
 
-            await notifyUser(targetUserId, `Your water bill for ${approved.period} (₱${approved.amount}) is now available. Due date: ${formatDateString(approved.dueDate)}.`);
+            const newBillId = (Array.isArray(published) && published[0]) ? published[0].bill_id : null;
+            await notifyUser(targetUserId, `Your water bill for ${approved.period} (₱${approved.amount}) is now available. Due date: ${formatDateString(approved.dueDate)}. Tap to view your bill statement.${newBillId ? ' [BILL:' + newBillId + ']' : ''}`);
 
             pendingBillsQueue = pendingBillsQueue.filter(b => b.id !== billId);
 
@@ -2948,10 +3134,19 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     const isWarning = n.message.includes('DISCONNECTED') || n.message.includes('WARNING') || n.message.includes('NOTICE');
                     const isGood = /approved|settled|available/i.test(n.message);
                     card.className = 'bg-white rounded-2xl p-4 shadow-sm border-l-4 ' + (isWarning ? 'border-red-500' : (isGood ? 'border-green-500' : 'border-orbis-navy'));
+                    const rawMsg = n.message || 'System Notification';
+                    const tagMatch = rawMsg.match(/\[BILL:(\d+)\]/);
+                    const shownMsg = rawMsg.replace(/\s*\[BILL:\d+\]/, '');
+                    const isBillNote = !!tagMatch || /water bill for .* is now available/i.test(rawMsg);
                     card.innerHTML = `
-                        <p class="text-xs text-gray-700 font-medium leading-relaxed">${n.message || 'System Notification'}</p>
+                        <p class="text-xs text-gray-700 font-medium leading-relaxed">${shownMsg}</p>
+                        ${isBillNote ? '<p class="text-[11px] text-blue-600 font-bold mt-2"><i class="fa-regular fa-file-lines mr-1"></i>View bill statement</p>' : ''}
                         <p class="text-[10px] text-gray-400 mt-2">${n.created_at ? n.created_at.slice(0, 16).replace('T', ' ') : 'Recent'}</p>
                     `;
+                    if (isBillNote) {
+                        card.classList.add('cursor-pointer');
+                        card.onclick = () => openBillStatement(tagMatch ? parseInt(tagMatch[1]) : null, 'notificationsView');
+                    }
                     list.appendChild(card);
                 });
             } else {
