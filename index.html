@@ -319,6 +319,16 @@
             </div>
         </div>
 
+        <!-- Idle warning -->
+        <div id="idleModal" class="modal-overlay">
+            <div class="bg-white p-6 rounded-3xl w-[90%] max-w-sm text-center shadow-2xl">
+                <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-3"><i class="fa-solid fa-clock"></i></div>
+                <h3 class="text-lg font-bold text-orbis-navy font-display">Are you still there?</h3>
+                <p class="text-xs text-gray-500 mt-1 mb-4">You will be logged out in <span id="idleSeconds" class="font-bold">60</span> seconds because of no activity.</p>
+                <button onclick="stayLoggedIn()" class="w-full py-3 rounded-xl font-semibold bg-orbis-navy text-white shadow-md">Stay logged in</button>
+            </div>
+        </div>
+
         <!-- Staff login details (shown once, right after creating or resetting) -->
         <div id="staffCredsModal" class="modal-overlay">
             <div class="bg-white p-6 rounded-3xl w-[90%] max-w-sm text-center shadow-2xl">
@@ -1524,8 +1534,23 @@
 
         let currentUser = null;
         let activeUserBill = null;
+        // lockout is saved in the browser, so refreshing the page does not remove it
+        let clientIp = 'unknown';
+        fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => { clientIp = d.ip || 'unknown'; }).catch(() => {});
+        const LOCK_KEY = 'orbisLockout';
         let failedAttempts = 0;
         let lockoutUntil = null;
+        try {
+            const saved = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null');
+            if (saved) { failedAttempts = saved.attempts || 0; lockoutUntil = saved.until ? new Date(saved.until) : null; }
+        } catch (e) {}
+        function saveLockout() {
+            try { localStorage.setItem(LOCK_KEY, JSON.stringify({ attempts: failedAttempts, until: lockoutUntil ? lockoutUntil.toISOString() : null })); } catch (e) {}
+        }
+        function resetFailedAttempts() {
+            failedAttempts = 0; lockoutUntil = null;
+            try { localStorage.removeItem(LOCK_KEY); } catch (e) {}
+        }
 
         let customersList = [
             { name: 'Rico Ramos', accountNo: '12554368', brgy: 'Brgy. Linao', status: 'Unpaid', mobile: '0917 123 4567', meterNo: 'MW-88213', balance: '405.00' },
@@ -1704,14 +1729,48 @@
         }
         function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
         
-        function confirmLogout() {
-            closeModal('logoutModal');
-            if (currentUser) addAuditRow(currentUser.user_id, currentUser.role, 'Logout', 'User logged out');
+        const authChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('orbis-auth') : null;
+        function endSessionLocally() {
+            document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
             currentUser = null;
             activeUserBill = null;
             switchView('roleSelectView');
+        }
+        if (authChannel) authChannel.onmessage = (ev) => {
+            if (ev.data === 'logout' && currentUser) { endSessionLocally(); showToast('You were logged out in another tab.', 'info'); }
+        };
+        function confirmLogout() {
+            closeModal('logoutModal');
+            if (currentUser) addAuditRow(currentUser.user_id, currentUser.role, 'Logout', 'User logged out');
+            endSessionLocally();
+            if (authChannel) authChannel.postMessage('logout');
             showToast('Successfully logged out.', 'success');
         }
+
+        // ===== Auto logout after 15 minutes of no activity (warning 1 minute before) =====
+        let IDLE_LIMIT_MS = 15 * 60 * 1000;
+        let IDLE_WARN_MS = 14 * 60 * 1000;
+        let lastActivity = Date.now();
+        ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'].forEach(ev =>
+            document.addEventListener(ev, () => {
+                if (!document.getElementById('idleModal').classList.contains('active')) lastActivity = Date.now();
+            }, true));
+        function stayLoggedIn() { lastActivity = Date.now(); closeModal('idleModal'); }
+        function autoLogout() {
+            if (currentUser) addAuditRow(currentUser.user_id, currentUser.role, 'Auto-Logout', 'Session ended after 15 minutes of inactivity');
+            endSessionLocally();
+            if (authChannel) authChannel.postMessage('logout');
+            showToast('You were logged out because of inactivity.', 'error');
+        }
+        setInterval(() => {
+            if (!currentUser) { closeModal('idleModal'); lastActivity = Date.now(); return; }
+            const idle = Date.now() - lastActivity;
+            if (idle >= IDLE_LIMIT_MS) return autoLogout();
+            if (idle >= IDLE_WARN_MS) {
+                document.getElementById('idleSeconds').textContent = Math.ceil((IDLE_LIMIT_MS - idle) / 1000);
+                document.getElementById('idleModal').classList.add('active');
+            }
+        }, 1000);
         function togglePassword(inputId, iconId) {
             const input = document.getElementById(inputId);
             const icon = document.getElementById(iconId);
@@ -1791,7 +1850,7 @@
                 user_role: normalizeRole(role),
                 action: action,
                 details: details,
-                ip_address: '127.0.0.1'
+                ip_address: clientIp
             };
 
             let result = await dbFetch('audit_logs', { method: 'POST', body });
@@ -3347,7 +3406,7 @@
                 if (!(await verifyPassword(pass, users[0].password_hash))) {
                     return handleFailedAttempt(account);
                 }
-                failedAttempts = 0;
+                resetFailedAttempts();
                 currentUser = users[0];
                 upgradePasswordIfNeeded(currentUser, pass);
                 document.getElementById('cName').textContent = currentUser.full_name;
@@ -3380,7 +3439,6 @@
 async function handleFailedAttempt(account, roleLabel = 'Resident') {
     failedAttempts++;
 
-    // look for the real owner of this account so the log shows the correct user
     let ownerId = null;
     const found = await dbFetch('users', {
         method: 'GET',
@@ -3389,15 +3447,21 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
     if (found && found.length > 0) ownerId = found[0].user_id;
     const ownerNote = ownerId ? `account ${account}` : `unknown account "${account}"`;
 
-    if (failedAttempts >= 3) {
-        lockoutUntil = new Date(Date.now() + 5 * 60 * 1000); // 5 minute lockout
-        showToast('3 failed attempts. Account locked for 5 minutes!', 'error');
-        addAuditRow(ownerId, roleLabel, 'Lockout Triggered', `3 failed login attempts recorded for ${ownerNote}`, 'red');
+    if (failedAttempts % 3 === 0) {
+        // 3 fails = 1 minute, 6 fails = 5 minutes, 9 or more = 15 minutes
+        const minutes = failedAttempts >= 9 ? 15 : (failedAttempts >= 6 ? 5 : 1);
+        lockoutUntil = new Date(Date.now() + minutes * 60 * 1000);
+        showToast(`3 failed attempts. Locked for ${minutes} minute${minutes > 1 ? 's' : ''}!`, 'error');
+        addAuditRow(ownerId, roleLabel, 'Lockout Triggered', `Locked for ${minutes} min after ${failedAttempts} failed logins for ${ownerNote}`, 'red');
     } else {
-        const remaining = 3 - failedAttempts;
+        const remaining = 3 - (failedAttempts % 3);
         showToast(`Invalid credentials. ${remaining} attempt(s) remaining before lockout.`, 'error');
-        addAuditRow(ownerId, roleLabel, 'Failed Login Attempt', `Failed login attempt (${failedAttempts}/3) for ${ownerNote}`, 'red');
+        addAuditRow(ownerId, roleLabel, 'Failed Login Attempt', `Failed login (${failedAttempts % 3}/3) for ${ownerNote}`, 'red');
     }
+    saveLockout();
+    // also save in the database (columns already exist in the users table)
+    if (ownerId) dbFetch('users', { method: 'PATCH', query: `user_id=eq.${ownerId}`,
+        body: { failed_attempts: failedAttempts, lockout_until: lockoutUntil ? lockoutUntil.toISOString() : null } });
 }
 
         document.getElementById('otpForm').addEventListener('submit', async function(e) {
@@ -3442,8 +3506,8 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             document.getElementById('otpVerifyForm').classList.remove('hidden');
             document.getElementById('otpVerifyForm').classList.add('flex');
 
-            showToast(`OTP Code ${generatedOtp} saved to database!`, 'success');
-            addAuditRow(targetUserId, 'Resident', 'OTP Requested', `Generated OTP ${generatedOtp} stored in DB`, 'blue');
+            showToast('OTP created. Use the code shown on this screen.', 'success');
+            addAuditRow(targetUserId, 'Resident', 'OTP Requested', 'A one-time code was created for this account', 'blue');
         });
 
         document.getElementById('otpVerifyForm').addEventListener('submit', async function(e) {
@@ -3594,7 +3658,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
         }
 
         // Reset counter on successful login
-        failedAttempts = 0;
+        resetFailedAttempts();
         currentUser = staffUser;
         upgradePasswordIfNeeded(currentUser, pass);
         document.getElementById('sName').textContent = currentUser.full_name;
@@ -3625,7 +3689,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
     });
 
     if (users && users.length > 0 && await verifyPassword(pass, users[0].password_hash)) {
-        failedAttempts = 0; // Reset counter on success
+        resetFailedAttempts(); // Reset counter on success
         currentUser = users[0];
         upgradePasswordIfNeeded(currentUser, pass);
         switchView('adminDashView');
