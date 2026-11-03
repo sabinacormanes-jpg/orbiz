@@ -405,17 +405,6 @@
                         </div>
                         <i class="fa-solid fa-chevron-right text-xs text-orbis-navy/40 pr-1"></i>
                     </button>
-
-                    <button onclick="switchView('meterSimView')" class="w-full bg-transparent border border-orbis-light/40 text-orbis-light p-3.5 rounded-2xl active:scale-95 transition-all flex items-center gap-3.5 group text-left">
-                        <div class="w-11 h-11 rounded-xl bg-white/10 flex items-center justify-center text-orbis-light text-lg flex-shrink-0">
-                            <i class="fa-solid fa-gauge-high"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="font-bold text-sm leading-snug">Smart Meter Simulator</div>
-                            <div class="text-[11px] text-orbis-light/70 font-medium">Demo device: sends readings automatically</div>
-                        </div>
-                        <i class="fa-solid fa-chevron-right text-xs text-orbis-light/40 pr-1"></i>
-                    </button>
                 </div>
             </div>
 
@@ -1155,57 +1144,6 @@
                 </div>
             </div>
 
-            <!-- SMART METER SIMULATOR (demo device) -->
-            <div id="meterSimView" class="view bg-orbis-off" style="height:100%;">
-                <div style="display:flex; flex:1; min-height:0; width:100%;">
-                    <main class="flex-1 overflow-y-auto p-7">
-                        <header class="bg-orbis-navy rounded-2xl p-5 mb-5 flex justify-between items-center gap-4 text-white">
-                            <div class="flex items-center gap-3">
-                                <button onclick="stopMeterAuto(); switchView('roleSelectView')" class="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-chevron-left"></i></button>
-                                <div>
-                                    <h1 class="text-xl font-bold font-display">Smart Meter Simulator</h1>
-                                    <p class="text-[11px] text-orbis-light/70">Demo device. Each meter sends its own reading to ORBIS, the same way a real smart meter would. Nobody types a reading.</p>
-                                </div>
-                            </div>
-                            <div class="flex gap-2 flex-shrink-0">
-                                <button id="simAutoBtn" onclick="toggleMeterAuto()" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow"><i class="fa-solid fa-play mr-1"></i>Start automatic mode</button>
-                                <button onclick="simulateMonthAll()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow"><i class="fa-solid fa-calendar-plus mr-1"></i>Send 1 month (all meters)</button>
-                            </div>
-                        </header>
-
-                        <div class="bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5 mb-5">
-                            <h3 class="text-sm font-bold text-orbis-navy font-display mb-1">Resident water meters</h3>
-                            <p class="text-[11px] text-gray-400 mb-3">Leave "Usage" empty and the meter picks a random usage. Type a number to choose it yourself. Readings go to Admin as new bills to approve.</p>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse text-xs">
-                                    <thead>
-                                        <tr class="border-b border-gray-200 text-gray-400">
-                                            <th class="py-2.5 px-3">Resident</th>
-                                            <th class="py-2.5 px-3">Account</th>
-                                            <th class="py-2.5 px-3">Last reading</th>
-                                            <th class="py-2.5 px-3">Next period</th>
-                                            <th class="py-2.5 px-3">Usage (cu.m.)</th>
-                                            <th class="py-2.5 px-3 text-right">Action</th>
-                                            <th class="py-2.5 px-3">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="meterSimTable">
-                                        <tr><td colspan="7" class="text-center py-6 text-gray-400">Loading meters...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div class="bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
-                            <h3 class="text-sm font-bold text-orbis-navy font-display mb-3">What the meters sent</h3>
-                            <div id="meterSimLog" class="space-y-1 text-[11px] text-gray-600 max-h-48 overflow-y-auto font-mono">
-                                <p class="text-gray-400">Nothing sent yet.</p>
-                            </div>
-                        </div>
-                    </main>
-                </div>
-            </div>
-
             <!-- ADMIN CONSOLE -->
             <div id="adminDashView" class="view bg-orbis-off" style="height:100%;">
                 <div style="display:flex; flex:1; min-height:0; width:100%;">
@@ -1588,7 +1526,7 @@
         function switchView(viewId) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
-            document.getElementById('deviceFrame').classList.toggle('ipad', viewId === 'adminLoginView' || viewId === 'adminDashView' || viewId === 'meterSimView');
+            document.getElementById('deviceFrame').classList.toggle('ipad', viewId === 'adminLoginView' || viewId === 'adminDashView');
 
             if (viewId === 'adminDashView') {
                 loadAdminData();
@@ -1604,8 +1542,6 @@
                 loadUsageForecast();
             } else if (viewId === 'consumerDashView') {
                 if (currentUser && typeof currentUser.user_id === 'number') loadUserBill(currentUser.user_id);
-            } else if (viewId === 'meterSimView') {
-                initMeterSim();
             }
         }
 
@@ -2392,8 +2328,6 @@
             if (reading && typeof reading.created_by === 'number') {
                 const nm = await getResidentName(reading.created_by);
                 if (!nm.startsWith('User ')) readerName = nm;
-            } else if (reading && reading.created_by === null) {
-                readerName = 'Smart Meter (Automatic)';
             }
 
             const amount = parseFloat(bill.amount) || 0;
@@ -2475,194 +2409,6 @@
             const block = currentRates.minimum_cubic;
             if (used <= block) return currentRates.minimum_charge;
             return currentRates.minimum_charge + (used - block) * currentRates.rate_per_cubic;
-        }
-
-        // ---- Smart meter simulator: a demo device that sends readings to ORBIS by itself ----
-        let meterState = [];
-        let meterAutoTimer = null;
-        let meterBusy = false;
-
-        function currentMonthLabel() {
-            const d = new Date();
-            return `${SHORT_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-        }
-
-        // "Nov 2026" -> "Dec 2026" (if the old label cannot be read, start from this month)
-        function nextMonthLabel(label) {
-            const parts = getPeriodParts(label);
-            const m = parts.from === '-' ? null : parts.to.match(/^([A-Za-z]{3}) (\d{4})$/);
-            if (!m) return currentMonthLabel();
-            const idx = SHORT_MONTHS.indexOf(m[1]);
-            const next = new Date(parseInt(m[2], 10), idx + 1, 1);
-            return `${SHORT_MONTHS[next.getMonth()]} ${next.getFullYear()}`;
-        }
-
-        function addSimLog(text, isError) {
-            const log = document.getElementById('meterSimLog');
-            if (!log) return;
-            if (log.firstElementChild && log.firstElementChild.classList.contains('text-gray-400')) log.innerHTML = '';
-            const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
-            const line = document.createElement('p');
-            line.className = isError ? 'text-red-600' : '';
-            line.textContent = `${time}  ${text}`;
-            log.prepend(line);
-            while (log.children.length > 40) log.removeChild(log.lastChild);
-        }
-
-        function updateMeterRow(i) {
-            const m = meterState[i];
-            if (!m) return;
-            const set = (id, v) => { const el = document.getElementById(id + '-' + i); if (el) el.textContent = v; };
-            set('simLast', m.last);
-            set('simPeriod', m.nextPeriod);
-            const st = document.getElementById('simStatus-' + i);
-            if (st) {
-                st.textContent = m.status;
-                st.className = 'py-2.5 px-3 text-[11px] font-bold ' + (m.status.startsWith('Failed') ? 'text-red-600' : (m.status === 'Ready' ? 'text-gray-400' : 'text-green-600'));
-            }
-        }
-
-        async function initMeterSim() {
-            const body = document.getElementById('meterSimTable');
-            body.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-400">Loading meters...</td></tr>';
-            await loadRates();
-
-            const users = await dbFetch('users', {
-                method: 'GET',
-                query: 'role=eq.Consumer&select=user_id,full_name,water_account_number&order=full_name.asc'
-            });
-            if (!users || !Array.isArray(users)) {
-                body.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-red-500">Could not load the meters. Please check your connection.</td></tr>';
-                return;
-            }
-            const readings = await dbFetch('meter_readings', {
-                method: 'GET',
-                query: 'select=user_id,present_reading,billing_period,created_at&order=created_at.desc'
-            });
-            const latest = {};
-            (readings || []).forEach(r => { if (!(r.user_id in latest)) latest[r.user_id] = r; });
-
-            meterState = users.map(u => {
-                const r = latest[u.user_id];
-                return {
-                    userId: u.user_id,
-                    name: u.full_name,
-                    acct: u.water_account_number,
-                    last: r ? parseFloat(r.present_reading) : 1000 + Math.floor(Math.random() * 900),   // a new meter starts with some number on it
-                    nextPeriod: r ? nextMonthLabel(r.billing_period) : currentMonthLabel(),
-                    status: 'Ready',
-                    sending: false
-                };
-            });
-
-            if (meterState.length === 0) {
-                body.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-400">No resident meters found.</td></tr>';
-                return;
-            }
-            body.innerHTML = meterState.map((m, i) => `
-                <tr class="border-b border-gray-100">
-                    <td class="py-2.5 px-3 font-semibold text-orbis-navy">${escapeHtml(m.name)}</td>
-                    <td class="py-2.5 px-3 font-mono">${escapeHtml(m.acct)}</td>
-                    <td class="py-2.5 px-3 font-bold" id="simLast-${i}">${m.last}</td>
-                    <td class="py-2.5 px-3" id="simPeriod-${i}">${m.nextPeriod}</td>
-                    <td class="py-2.5 px-3"><input id="simUsage-${i}" type="number" min="0" placeholder="auto" class="w-20 px-2 py-1 border rounded-lg text-xs"></td>
-                    <td class="py-2.5 px-3 text-right"><button onclick="sendMeterNow(${i})" class="bg-orbis-navy text-white font-bold px-3 py-1.5 rounded-lg text-xs active:scale-95 transition-transform">Send reading</button></td>
-                    <td class="py-2.5 px-3 text-[11px] font-bold text-gray-400" id="simStatus-${i}">Ready</td>
-                </tr>
-            `).join('');
-        }
-
-        // the meter sends: previous reading (its last one), present reading, period and the computed amount
-        async function sendMeterReading(m, usage) {
-            if (m.sending) return false;
-            m.sending = true;
-            try {
-                const used = (Number.isFinite(usage) && usage >= 0) ? Math.round(usage) : (8 + Math.floor(Math.random() * 18));
-                const prev = m.last;
-                const pres = prev + used;
-                const amount = computeAmountFromUsage(used);
-                const due = new Date();
-                due.setDate(due.getDate() + currentRates.due_days);
-                const dueLocal = new Date(due.getTime() - due.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-
-                const saved = await dbFetch('meter_readings', {
-                    method: 'POST',
-                    body: {
-                        user_id: m.userId,
-                        water_account_number: m.acct,
-                        billing_period: m.nextPeriod,
-                        previous_reading: prev,
-                        present_reading: pres,
-                        amount: parseFloat(amount.toFixed(2)),
-                        due_date: dueLocal,
-                        status: 'Pending Approval',
-                        created_by: null
-                    }
-                });
-                if (!saved) {
-                    m.status = 'Failed - not saved';
-                    addSimLog(`Meter ${m.acct}: could not send the reading`, true);
-                    return false;
-                }
-
-                addPaymentLog('Automatic Meter Reading', 'Smart Meter', `Meter ${m.acct} sent ${pres} (${used} cu.m.) for ${m.nextPeriod}: bill ₱${amount.toFixed(2)} waiting for Admin approval`);
-                addSimLog(`Meter ${m.acct} (${m.name}) sent ${pres}: ${used} cu.m. for ${m.nextPeriod}, bill PHP ${amount.toFixed(2)}`);
-                m.last = pres;
-                m.nextPeriod = nextMonthLabel(m.nextPeriod);
-                m.status = 'Sent, waiting for Admin';
-                return true;
-            } finally {
-                m.sending = false;
-                updateMeterRow(meterState.indexOf(m));
-            }
-        }
-
-        async function sendMeterNow(i) {
-            const m = meterState[i];
-            if (!m) return;
-            await loadRates();
-            const input = document.getElementById('simUsage-' + i);
-            await sendMeterReading(m, parseFloat(input.value));
-        }
-
-        async function simulateMonthAll() {
-            if (meterBusy) return;
-            meterBusy = true;
-            try {
-                await loadRates();
-                for (let i = 0; i < meterState.length; i++) {
-                    const input = document.getElementById('simUsage-' + i);
-                    await sendMeterReading(meterState[i], input ? parseFloat(input.value) : NaN);
-                }
-            } finally {
-                meterBusy = false;
-            }
-        }
-
-        function stopMeterAuto() {
-            if (meterAutoTimer) {
-                clearInterval(meterAutoTimer);
-                meterAutoTimer = null;
-            }
-            const btn = document.getElementById('simAutoBtn');
-            if (btn) {
-                btn.className = 'bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow';
-                btn.innerHTML = '<i class="fa-solid fa-play mr-1"></i>Start automatic mode';
-            }
-        }
-
-        function toggleMeterAuto() {
-            if (meterAutoTimer) {
-                stopMeterAuto();
-                showToast('Automatic mode stopped.', 'info');
-                return;
-            }
-            simulateMonthAll();
-            meterAutoTimer = setInterval(simulateMonthAll, 20000);
-            const btn = document.getElementById('simAutoBtn');
-            btn.className = 'bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow';
-            btn.innerHTML = '<i class="fa-solid fa-stop mr-1"></i>Stop automatic mode';
-            showToast('Automatic mode on: every 20 seconds counts as one month.', 'info');
         }
 
         // the previous reading is the resident's last saved reading, so it cannot be typed wrong
