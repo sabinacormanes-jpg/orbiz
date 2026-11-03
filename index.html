@@ -319,6 +319,42 @@
             </div>
         </div>
 
+        <!-- CAPTCHA -->
+        <div id="captchaModal" class="modal-overlay">
+            <div class="bg-white p-6 rounded-3xl w-[90%] max-w-sm text-center shadow-2xl">
+                <h3 class="text-lg font-bold text-orbis-navy font-display"><i class="fa-solid fa-shield-halved text-blue-600 mr-2"></i>Security check</h3>
+                <p class="text-xs text-gray-500 mt-1 mb-3">Too many failed logins. Type the letters you see to continue.</p>
+                <canvas id="captchaCanvas" width="220" height="64" class="mx-auto rounded-xl border bg-orbis-off"></canvas>
+                <input type="text" id="captchaInput" maxlength="5" autocomplete="off" class="w-full mt-3 px-3.5 py-2.5 border rounded-xl text-sm text-center tracking-widest uppercase focus:ring-2 focus:ring-orbis-navy" placeholder="Type the code">
+                <button type="button" onclick="drawCaptcha()" class="text-[11px] text-blue-600 font-bold mt-2"><i class="fa-solid fa-rotate mr-1"></i>New code</button>
+                <div class="flex gap-2 mt-3">
+                    <button type="button" onclick="finishCaptcha(false)" class="flex-1 py-3 rounded-xl font-semibold bg-gray-100 text-orbis-navy">Cancel</button>
+                    <button type="button" onclick="submitCaptcha()" class="flex-1 py-3 rounded-xl font-semibold bg-orbis-navy text-white shadow-md">Verify</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Password -->
+        <div id="changePassModal" class="modal-overlay">
+            <div class="bg-white p-6 rounded-3xl w-[90%] max-w-md shadow-2xl">
+                <div class="flex justify-between items-center mb-4 border-b pb-3">
+                    <h3 class="text-lg font-bold text-orbis-navy font-display"><i class="fa-solid fa-key text-blue-600 mr-2"></i>Change Password</h3>
+                    <button onclick="closeModal('changePassModal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                <form id="changePassForm" onsubmit="saveNewPassword(event)" class="flex flex-col gap-3">
+                    <input type="password" id="cpCurrent" autocomplete="current-password" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="Current password">
+                    <input type="password" id="cpNew" oninput="renderPwRules('cpNew','cpRules')" autocomplete="new-password" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="New password">
+                    <div id="cpRules" class="ml-1"></div>
+                    <input type="password" id="cpConfirm" autocomplete="new-password" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="Confirm new password">
+                    <label class="text-[11px] text-gray-500 flex items-center gap-2"><input type="checkbox" onchange="['cpCurrent','cpNew','cpConfirm'].forEach(i=>document.getElementById(i).type=this.checked?'text':'password')"> Show passwords</label>
+                    <div class="flex gap-2 mt-1">
+                        <button type="button" onclick="closeModal('changePassModal')" class="flex-1 py-3 rounded-xl font-semibold bg-gray-100 text-orbis-navy">Cancel</button>
+                        <button type="submit" class="flex-1 py-3 rounded-xl font-semibold bg-orbis-navy text-white shadow-md">Change Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Idle warning -->
         <div id="idleModal" class="modal-overlay">
             <div class="bg-white p-6 rounded-3xl w-[90%] max-w-sm text-center shadow-2xl">
@@ -646,13 +682,14 @@
                         <div>
                             <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Password</label>
                             <div class="relative">
-                                <input type="password" id="regPassword" class="w-full px-4 py-3 pr-11 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="Min 8 chars, Upper, Lower, Num, Special">
+                                <input type="password" id="regPassword" oninput="renderPwRules('regPassword','regRules')" class="w-full px-4 py-3 pr-11 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="Min 8 chars, Upper, Lower, Num, Special">
                                 <button type="button" onclick="togglePassword('regPassword', 'regEyeIcon')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-orbis-navy">
                                     <i id="regEyeIcon" class="fa-solid fa-eye"></i>
                                 </button>
                             </div>
                         </div>
                         <div>
+                            <div id="regRules" class="mb-2 ml-1"></div>
                             <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Confirm Password</label>
                             <div class="relative">
                                 <input type="password" id="regConfirmPassword" class="w-full px-4 py-3 pr-11 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="Re-enter password">
@@ -1173,6 +1210,7 @@
                     <button id="editProfileBtn" onclick="openEditProfile()" class="hidden w-full bg-white text-orbis-navy font-bold py-3.5 rounded-xl shadow mb-3 active:scale-95 transition-transform">
                         <i class="fa-solid fa-user-pen mr-2"></i>Edit Profile
                     </button>
+                    <button onclick="openChangePassword()" class="w-full bg-white text-orbis-navy font-bold py-3.5 rounded-xl shadow mb-3 active:scale-95 transition-transform"><i class="fa-solid fa-key mr-2"></i>Change Password</button>
                     <button onclick="openModal('logoutModal')" class="w-full bg-red-500 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">
                         <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Log Out
                     </button>
@@ -1729,6 +1767,7 @@
         }
         function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
         
+        const TAB_ID = Math.random().toString(36).slice(2);
         const authChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('orbis-auth') : null;
         function endSessionLocally() {
             document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
@@ -1738,6 +1777,9 @@
         }
         if (authChannel) authChannel.onmessage = (ev) => {
             if (ev.data === 'logout' && currentUser) { endSessionLocally(); showToast('You were logged out in another tab.', 'info'); }
+            else if (ev.data && ev.data.type === 'pw' && ev.data.tab !== TAB_ID && currentUser && currentUser.user_id === ev.data.uid) {
+                endSessionLocally(); showToast('Your password was changed. Please log in again.', 'info');
+            }
         };
         function confirmLogout() {
             closeModal('logoutModal');
@@ -1745,6 +1787,80 @@
             endSessionLocally();
             if (authChannel) authChannel.postMessage('logout');
             showToast('Successfully logged out.', 'success');
+        }
+
+
+        // ===== Password rules (shown while typing) =====
+        const STRONG_PASS = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        function renderPwRules(inputId, boxId) {
+            const v = document.getElementById(inputId).value;
+            const rules = [['At least 8 characters', v.length >= 8], ['One uppercase letter', /[A-Z]/.test(v)], ['One lowercase letter', /[a-z]/.test(v)],
+                           ['One number', /\d/.test(v)], ['One special character (@$!%*?&)', /[@$!%*?&]/.test(v)]];
+            document.getElementById(boxId).innerHTML = rules.map(r =>
+                `<div class="text-[11px] ${r[1] ? 'text-green-600' : 'text-gray-400'}"><i class="fa-solid ${r[1] ? 'fa-circle-check' : 'fa-circle'} mr-1"></i>${r[0]}</div>`).join('');
+        }
+
+        // ===== CAPTCHA (drawn on a canvas, no outside service) =====
+        let captchaCode = '', captchaDone = null;
+        function drawCaptcha() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            captchaCode = Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+            const c = document.getElementById('captchaCanvas'), g = c.getContext && c.getContext('2d');
+            document.getElementById('captchaInput').value = '';
+            if (!g) return;
+            g.clearRect(0, 0, c.width, c.height);
+            g.fillStyle = '#EAEDF4'; g.fillRect(0, 0, c.width, c.height);
+            for (let i = 0; i < 7; i++) { g.strokeStyle = `rgba(33,45,75,${0.2 + Math.random() * 0.3})`; g.beginPath(); g.moveTo(Math.random() * c.width, Math.random() * c.height); g.lineTo(Math.random() * c.width, Math.random() * c.height); g.stroke(); }
+            g.font = 'bold 34px Inter, sans-serif'; g.fillStyle = '#212D4B';
+            for (let i = 0; i < 5; i++) { g.save(); g.translate(22 + i * 38, 40 + (Math.random() * 10 - 5)); g.rotate((Math.random() - 0.5) * 0.6); g.fillText(captchaCode[i], 0, 0); g.restore(); }
+        }
+        function requireCaptcha() {
+            return new Promise(resolve => { captchaDone = resolve; drawCaptcha(); openModal('captchaModal'); });
+        }
+        function finishCaptcha(ok) {
+            closeModal('captchaModal');
+            if (captchaDone) { const f = captchaDone; captchaDone = null; f(ok); }
+        }
+        function submitCaptcha() {
+            if (document.getElementById('captchaInput').value.trim().toUpperCase() === captchaCode) {
+                addAuditRow(null, 'System', 'CAPTCHA Passed', 'CAPTCHA completed before a login attempt', 'blue');
+                finishCaptcha(true);
+            } else {
+                showToast('Wrong code. Try the new one.', 'error');
+                addAuditRow(null, 'System', 'CAPTCHA Failed', 'Wrong CAPTCHA code entered', 'red');
+                drawCaptcha();
+            }
+        }
+
+        // ===== Change Password =====
+        function openChangePassword() {
+            if (!currentUser) return;
+            ['cpCurrent', 'cpNew', 'cpConfirm'].forEach(i => document.getElementById(i).value = '');
+            renderPwRules('cpNew', 'cpRules');
+            openModal('changePassModal');
+        }
+        async function saveNewPassword(e) {
+            e.preventDefault();
+            if (!currentUser) return;
+            const cur = document.getElementById('cpCurrent').value;
+            const nw = document.getElementById('cpNew').value;
+            const cf = document.getElementById('cpConfirm').value;
+            if (!cur || !nw || !cf) return showToast('Please fill in all fields.', 'error');
+            if (!(await verifyPassword(cur, currentUser.password_hash))) {
+                addAuditRow(currentUser.user_id, currentUser.role, 'Password Change Failed', 'Wrong current password entered', 'red');
+                return showToast('Current password is not correct.', 'error');
+            }
+            if (!STRONG_PASS.test(nw)) return showToast('New password does not follow the rules.', 'error');
+            if (nw !== cf) return showToast('New passwords do not match.', 'error');
+            if (nw === cur) return showToast('New password must be different from the old one.', 'error');
+            const newHash = await hashPassword(nw);
+            const done = await dbFetch('users', { method: 'PATCH', query: `user_id=eq.${currentUser.user_id}`, body: { password_hash: newHash } });
+            if (!done || done.length === 0) return showToast('Could not change the password. Please try again.', 'error');
+            currentUser.password_hash = newHash;
+            closeModal('changePassModal');
+            addAuditRow(currentUser.user_id, currentUser.role, 'Password Changed', 'User changed their own password', 'blue');
+            if (authChannel) authChannel.postMessage({ type: 'pw', uid: currentUser.user_id, tab: TAB_ID });
+            showToast('Password changed. Other open sessions were logged out.', 'success');
         }
 
         // ===== Auto logout after 15 minutes of no activity (warning 1 minute before) =====
@@ -3396,6 +3512,7 @@
                 const secs = Math.ceil((lockoutUntil - new Date()) / 1000);
                 return showToast(`Account locked. Retry in ${secs}s.`, 'error');
             }
+            if (failedAttempts >= 3 && !(await requireCaptcha())) return;
 
             const users = await dbFetch('users', {
                 method: 'GET',
@@ -3640,6 +3757,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
 
     // Check if account is currently locked out
     if (checkLockout()) return;
+    if (failedAttempts >= 3 && !(await requireCaptcha())) return;
 
     const id = document.getElementById('staffId').value.trim();
     const pass = document.getElementById('staffPassword').value.trim();
@@ -3677,6 +3795,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
 
     // Check if account is currently locked out
     if (checkLockout()) return;
+    if (failedAttempts >= 3 && !(await requireCaptcha())) return;
 
     const user = document.getElementById('adminUser').value.trim();
     const pass = document.getElementById('adminPass').value.trim();
