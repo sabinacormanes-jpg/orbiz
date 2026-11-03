@@ -319,6 +319,20 @@
             </div>
         </div>
 
+        <!-- Restore backup -->
+        <div id="restoreModal" class="modal-overlay">
+            <div class="bg-white p-6 rounded-3xl w-[90%] max-w-sm text-center shadow-2xl">
+                <div class="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-3"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <h3 class="text-lg font-bold text-orbis-navy font-display">Restore this backup?</h3>
+                <p id="restoreText" class="text-xs text-gray-500 mt-1 mb-3"></p>
+                <input type="text" id="restoreConfirmInput" autocomplete="off" class="w-full px-3.5 py-2.5 border rounded-xl text-sm text-center focus:ring-2 focus:ring-red-400" placeholder='Type RESTORE to confirm'>
+                <div class="flex gap-2 mt-3">
+                    <button onclick="closeModal('restoreModal')" class="flex-1 py-3 rounded-xl font-semibold bg-gray-100 text-orbis-navy">Cancel</button>
+                    <button onclick="confirmRestore()" class="flex-1 py-3 rounded-xl font-semibold bg-red-500 text-white shadow-md">Restore</button>
+                </div>
+            </div>
+        </div>
+
         <!-- CAPTCHA -->
         <div id="captchaModal" class="modal-overlay">
             <div class="bg-white p-6 rounded-3xl w-[90%] max-w-sm text-center shadow-2xl">
@@ -1305,6 +1319,10 @@
                                 <i class="fa-solid fa-list-check"></i>
                                 <span>Audit Log Trails</span>
                             </button>
+                            <button id="adminNavBackup" class="admin-nav-item" onclick="switchAdminTab('backup')">
+                                <i class="fa-solid fa-database"></i>
+                                <span>Backup & Recovery</span>
+                            </button>
                             <button class="admin-nav-item mt-auto text-red-400 hover:text-red-300" onclick="openModal('logoutModal')">
                                 <i class="fa-solid fa-right-from-bracket"></i>
                                 <span>Log Out</span>
@@ -1492,6 +1510,23 @@
         </div>
     </div>
 </div>
+
+                        <!-- TAB: Backup & Recovery -->
+                        <div id="adminTabBackup" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
+                            <div class="flex justify-between items-center mb-1">
+                                <h3 class="text-sm font-bold text-orbis-navy font-display">Backup & Recovery</h3>
+                                <button onclick="backupNow()" class="bg-orbis-navy text-white text-xs font-bold px-3 py-1.5 rounded-full active:scale-95 transition-transform"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>Back up now</button>
+                            </div>
+                            <p class="text-[11px] text-gray-400 mb-4">The database is backed up automatically every day at 2:00 AM. The newest 14 backups are kept in a private place that the app cannot read directly.</p>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead><tr class="border-b border-gray-200 text-gray-400">
+                                        <th class="py-2 px-3">Backup</th><th class="py-2 px-3">Date & time</th><th class="py-2 px-3">Type</th><th class="py-2 px-3">Size</th><th class="py-2 px-3 text-right">Action</th>
+                                    </tr></thead>
+                                    <tbody id="backupTable"><tr><td colspan="5" class="text-center py-6 text-gray-400">Loading backups...</td></tr></tbody>
+                                </table>
+                            </div>
+                        </div>
 
                         <!-- TAB 3: Live System Audit Logs -->
                         <div id="adminTabRates" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-orbis-navy/5">
@@ -1861,6 +1896,78 @@
             addAuditRow(currentUser.user_id, currentUser.role, 'Password Changed', 'User changed their own password', 'blue');
             if (authChannel) authChannel.postMessage({ type: 'pw', uid: currentUser.user_id, tab: TAB_ID });
             showToast('Password changed. Other open sessions were logged out.', 'success');
+        }
+
+
+        // ===== Backup & Recovery (Admin only; the work is done by SQL functions in Supabase) =====
+        let pendingRestoreId = null;
+        const backupArgs = (extra = {}) => ({ p_user: currentUser ? currentUser.user_id : null, ...extra });
+
+        async function loadBackups() {
+            const table = document.getElementById('backupTable');
+            if (!currentUser || currentUser.role !== 'Admin') return;
+            const rows = await dbFetch('rpc/orbis_list_backups', { method: 'POST', body: backupArgs() });
+            if (!rows || !Array.isArray(rows)) {
+                table.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-red-400">Could not load backups. Did you run orbis_backup.sql in Supabase?</td></tr>';
+                return;
+            }
+            if (rows.length === 0) { table.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400">No backups yet. Press "Back up now".</td></tr>'; return; }
+            table.innerHTML = '';
+            rows.forEach(b => {
+                const when = new Date(b.taken_at).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
+                const kind = b.kind === 'auto' ? 'Automatic' : (b.kind === 'pre-restore' ? 'Before restore' : 'Manual');
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-100 hover:bg-gray-50/50';
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 font-bold">#${b.id}</td>
+                    <td class="py-2.5 px-3 text-gray-600">${escapeHtml(when)}</td>
+                    <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${b.kind === 'auto' ? 'bg-blue-100 text-blue-700' : (b.kind === 'pre-restore' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700')}">${kind}</span></td>
+                    <td class="py-2.5 px-3 text-gray-500">${b.size_kb} KB</td>
+                    <td class="py-2.5 px-3 text-right whitespace-nowrap">
+                        <button onclick="downloadBackup(${b.id})" class="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold px-2.5 py-1 rounded-lg text-xs mr-1"><i class="fa-solid fa-download mr-1"></i>Download</button>
+                        <button data-when="${escapeHtml(when)}" onclick="askRestore(${b.id}, this.dataset.when)" class="bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold px-2.5 py-1 rounded-lg text-xs"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Restore</button>
+                    </td>`;
+                table.appendChild(tr);
+            });
+        }
+
+        async function backupNow() {
+            const id = await dbFetch('rpc/orbis_backup_now', { method: 'POST', body: backupArgs() });
+            if (!id) return showToast('Backup failed. Please try again.', 'error');
+            addAuditRow(currentUser.user_id, 'Admin', 'Backup Created', `Admin created manual backup #${id}`, 'blue');
+            showToast(`Backup #${id} created.`, 'success');
+            loadBackups();
+        }
+
+        async function downloadBackup(id) {
+            const data = await dbFetch('rpc/orbis_get_backup', { method: 'POST', body: backupArgs({ p_id: id }) });
+            if (!data) return showToast('Could not download this backup.', 'error');
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `orbis-backup-${id}.json`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+            addAuditRow(currentUser.user_id, 'Admin', 'Backup Downloaded', `Admin downloaded backup #${id}`, 'blue');
+        }
+
+        function askRestore(id, when) {
+            pendingRestoreId = id;
+            document.getElementById('restoreText').textContent = `All data will be replaced with backup #${id} (${when}). The current data is saved first as a "Before restore" backup.`;
+            document.getElementById('restoreConfirmInput').value = '';
+            openModal('restoreModal');
+        }
+
+        async function confirmRestore() {
+            if (document.getElementById('restoreConfirmInput').value.trim() !== 'RESTORE') return showToast('Type RESTORE to confirm.', 'error');
+            const id = pendingRestoreId; pendingRestoreId = null;
+            closeModal('restoreModal');
+            const adminId = currentUser.user_id;
+            const res = await dbFetch('rpc/orbis_restore_backup', { method: 'POST', body: backupArgs({ p_id: id }) });
+            if (res !== 'ok') return showToast('Restore failed. Nothing was changed.', 'error');
+            await addAuditRow(adminId, 'Admin', 'Backup Restored', `Admin restored the database from backup #${id}`, 'red');
+            endSessionLocally();
+            showToast('Restore done. Please log in again.', 'success');
         }
 
         // ===== Auto logout after 15 minutes of no activity (warning 1 minute before) =====
@@ -2874,8 +2981,9 @@
             const btnL = document.getElementById('adminNavLogs');
             const btnR = document.getElementById('adminNavRates');
 
-            [tApprovals, tUsers, tLogs, tRates].forEach(t => t.classList.add('hidden'));
-            [btnA, btnU, btnL, btnR].forEach(b => b.classList.remove('active'));
+            const tBackup = document.getElementById('adminTabBackup'), btnB = document.getElementById('adminNavBackup');
+            [tApprovals, tUsers, tLogs, tRates, tBackup].forEach(t => t.classList.add('hidden'));
+            [btnA, btnU, btnL, btnR, btnB].forEach(b => b.classList.remove('active'));
 
             if (tab === 'approvals') {
                 tApprovals.classList.remove('hidden');
@@ -2887,6 +2995,10 @@
                 tRates.classList.remove('hidden');
                 btnR.classList.add('active');
                 loadRatesForm();
+            } else if (tab === 'backup') {
+                tBackup.classList.remove('hidden');
+                btnB.classList.add('active');
+                loadBackups();
             } else {
                 tLogs.classList.remove('hidden');
                 btnL.classList.add('active');
