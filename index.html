@@ -1366,7 +1366,7 @@
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="text-sm font-bold text-orbis-navy font-display">Live System Audit Trails (`audit_logs` Table)</h3>
                                 <div class="flex items-center gap-2">
-                                    <span id="logCountBadge" class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">Loading...</span>
+                                    
                                     <button onclick="refreshAuditLogs()" class="bg-orbis-navy text-white text-xs font-bold px-3 py-1 rounded-full active:scale-95 transition-transform">
                                         <i class="fa-solid fa-rotate-right mr-1"></i>Refresh
                                     </button>
@@ -3880,13 +3880,24 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 else localStorage.removeItem(AUDIT_CUTOFF_KEY);
             } catch (e) {}
         }
+        // tap a month title to fold or open that month
+        function toggleAuditMonth(key) {
+            const header = document.querySelector(`tr[data-month-header="${key}"]`);
+            if (!header) return;
+            const collapsed = header.getAttribute('data-collapsed') === '1';
+            document.querySelectorAll(`tr[data-month="${key}"]`).forEach(r => r.classList.toggle('hidden', !collapsed));
+            header.setAttribute('data-collapsed', collapsed ? '0' : '1');
+            const icon = header.querySelector('i');
+            if (icon) icon.className = (collapsed ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-right') + ' mr-2 text-[10px]';
+        }
+
         async function refreshAuditLogs() {
             // use the newest log's time as the starting line, so only NEW records are counted after this
             const latest = await dbFetch('audit_logs', { method: 'GET', query: 'select=created_at&order=created_at.desc&limit=1' });
             const cutoff = (latest && latest.length > 0) ? latest[0].created_at : new Date().toISOString();
             setAuditCutoff(cutoff);
             await loadAuditLogs();
-            showToast('Audit trail refreshed. Record count reset to 0.', 'success');
+            showToast('Audit trail cleared. New activity will show up here.', 'success');
         }
         async function showAllAuditLogs() {
             setAuditCutoff(null);
@@ -3903,14 +3914,26 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             const nameMap = await getUserNameMap();
 
             const table = document.getElementById('auditTrailTable');
-            const badge = document.getElementById('logCountBadge');
             if (!table) return;
 
             if (logs && Array.isArray(logs) && logs.length > 0) {
-                if (badge) badge.textContent = `${logs.length} Total Records`;
                 table.innerHTML = '';
                 
+                let lastMonthKey = null;
                 logs.forEach(log => {
+                    const dm = log.created_at ? new Date(log.created_at) : new Date();
+                    const monthKey = `${dm.getFullYear()}-${String(dm.getMonth() + 1).padStart(2, '0')}`;
+                    if (monthKey !== lastMonthKey) {
+                        lastMonthKey = monthKey;
+                        const headerRow = document.createElement('tr');
+                        headerRow.className = 'cursor-pointer select-none';
+                        headerRow.setAttribute('data-month-header', monthKey);
+                        headerRow.setAttribute('data-collapsed', '0');
+                        headerRow.onclick = () => toggleAuditMonth(monthKey);
+                        headerRow.innerHTML = `<td colspan="4" class="py-2 px-3 bg-orbis-off text-orbis-navy font-bold text-[11px] uppercase tracking-wider border-b border-gray-200"><i class="fa-solid fa-chevron-down mr-2 text-[10px]"></i>${dm.toLocaleString('en-US', { month: 'long', year: 'numeric' })}</td>`;
+                        table.appendChild(headerRow);
+                    }
+
                     let timeStr = 'Just now';
                     if (log.created_at) {
                         const d = new Date(log.created_at);
@@ -3949,15 +3972,15 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     row.className = 'border-b border-gray-100 hover:bg-gray-50/50 transition-colors';
                     row.innerHTML = `
                         <td class="py-2.5 px-3 whitespace-nowrap text-gray-500 font-mono text-[11px]">${timeStr}</td>
-                        <td class="py-2.5 px-3 font-semibold text-orbis-navy whitespace-nowrap">${userIdDisplay}</td>
-                        <td class="py-2.5 px-3 whitespace-nowrap"><span class="${badgeClass} px-2 py-0.5 rounded-full font-bold text-[10px]">${act}</span></td>
-                        <td class="py-2.5 px-3 text-gray-600">${log.details || ''}</td>
+                        <td class="py-2.5 px-3 font-semibold text-orbis-navy whitespace-nowrap">${escapeHtml(userIdDisplay)}</td>
+                        <td class="py-2.5 px-3 whitespace-nowrap"><span class="${badgeClass} px-2 py-0.5 rounded-full font-bold text-[10px]">${escapeHtml(act)}</span></td>
+                        <td class="py-2.5 px-3 text-gray-600">${escapeHtml(log.details || '')}</td>
                     `;
+                    row.setAttribute('data-month', monthKey);
                     table.appendChild(row);
                 });
             } else {
-                if (badge) badge.textContent = '0 Records';
-                const emptyMsg = cutoff ? 'No new records since you pressed Refresh.' : 'No audit logs found in database.';
+                const emptyMsg = cutoff ? 'Nothing here yet. New activity will show up here.' : 'No activity has been recorded yet.';
                 table.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-400">${emptyMsg}</td></tr>`;
             }
         }
