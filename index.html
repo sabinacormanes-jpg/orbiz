@@ -217,6 +217,8 @@
             <span id="toastMessage">Notification</span>
         </div>
 
+        <div id="lockBanner" class="hidden absolute bottom-5 left-1/2 -translate-x-1/2 z-[90] bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg whitespace-nowrap"></div>
+
         <!-- Logout Confirmation Modal -->
         <div id="logoutModal" class="modal-overlay">
             <div class="bg-white p-6 rounded-3xl w-[85%] max-w-sm text-center shadow-2xl">
@@ -276,6 +278,10 @@
                     <div>
                         <label class="block text-xs font-bold text-orbis-navy/70 uppercase mb-1 ml-1">Mobile number</label>
                         <input type="tel" id="staffNewMobile" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="09xx xxx xxxx">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-orbis-navy/70 uppercase mb-1 ml-1">Email</label>
+                        <input type="email" id="staffNewEmail" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="name@example.com">
                     </div>
                     <p class="text-[11px] text-gray-500">A temporary password is made for you. Give it to the staff so they can log in.</p>
                     <div class="flex gap-2 mt-1">
@@ -439,6 +445,80 @@
             </div>
         </div>
 
+        <!-- Generic confirmation for sensitive actions -->
+        <div id="confirmModal" class="modal-overlay">
+            <div class="bg-white p-6 rounded-3xl w-[85%] max-w-sm text-center shadow-2xl">
+                <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-3"><i class="fa-solid fa-circle-question"></i></div>
+                <h3 id="confirmTitle" class="text-lg font-bold text-orbis-navy font-display">Are you sure?</h3>
+                <p id="confirmText" class="text-xs text-gray-500 mt-1 mb-5"></p>
+                <div class="flex gap-3">
+                    <button onclick="closeModal('confirmModal')" class="flex-1 py-3 rounded-xl font-semibold bg-gray-100 text-orbis-navy">Cancel</button>
+                    <button id="confirmOkBtn" onclick="runConfirmed()" class="flex-1 py-3 rounded-xl font-semibold bg-orbis-navy text-white shadow-md">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- OTP challenge (first login verification, change email) -->
+        <div id="otpChallengeModal" class="modal-overlay">
+            <div class="bg-white p-6 rounded-3xl w-[90%] max-w-sm text-center shadow-2xl">
+                <div class="w-14 h-14 bg-blue-100 text-orbis-navy rounded-full flex items-center justify-center text-2xl mx-auto mb-3"><i class="fa-solid fa-shield-halved"></i></div>
+                <h3 id="ocTitle" class="text-lg font-bold text-orbis-navy font-display">Verify with OTP</h3>
+                <p class="text-[11px] text-gray-500 mt-1 mb-3">Demo mode: email/SMS is not connected, so the code is shown here. It expires in 10 minutes and works once.</p>
+                <div id="ocCode" class="bg-orbis-navy text-white text-2xl font-extrabold tracking-widest py-2 px-4 rounded-2xl mb-3 font-mono select-all">------</div>
+                <input type="text" id="ocInput" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="w-full text-center tracking-widest text-lg font-bold px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orbis-navy" placeholder="000000">
+                <button type="button" onclick="resendOtpChallenge()" class="text-[11px] text-blue-600 font-bold mt-2"><i class="fa-solid fa-rotate mr-1"></i>Resend code</button>
+                <div class="flex gap-2 mt-3">
+                    <button type="button" onclick="cancelOtpChallenge()" class="flex-1 py-3 rounded-xl font-semibold bg-gray-100 text-orbis-navy">Cancel</button>
+                    <button type="button" onclick="submitOtpChallenge()" class="flex-1 py-3 rounded-xl font-semibold bg-orbis-navy text-white shadow-md">Verify</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Email -->
+        <div id="changeEmailModal" class="modal-overlay">
+            <div class="bg-white p-6 rounded-3xl w-[90%] max-w-md shadow-2xl">
+                <div class="flex justify-between items-center mb-4 border-b pb-3">
+                    <h3 class="text-lg font-bold text-orbis-navy font-display"><i class="fa-solid fa-envelope text-blue-600 mr-2"></i>Change Email</h3>
+                    <button onclick="closeModal('changeEmailModal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                <form id="changeEmailForm" onsubmit="submitChangeEmail(event)" class="flex flex-col gap-3">
+                    <p class="text-[11px] text-gray-500">Current email: <span id="ceCurrent" class="font-bold">-</span></p>
+                    <input type="email" id="ceNew" autocomplete="off" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="New email address">
+                    <input type="password" id="cePass" autocomplete="current-password" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="Current password">
+                    <p class="text-[11px] text-gray-500">A code is sent to the new email. The change is saved only after you verify it.</p>
+                    <div class="flex gap-2 mt-1">
+                        <button type="button" onclick="closeModal('changeEmailModal')" class="flex-1 py-3 rounded-xl font-semibold bg-gray-100 text-orbis-navy">Cancel</button>
+                        <button type="submit" class="flex-1 py-3 rounded-xl font-semibold bg-orbis-navy text-white shadow-md">Send Code</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Admin: edit user -->
+        <div id="editUserModal" class="modal-overlay">
+            <div class="bg-white p-6 rounded-3xl w-[90%] max-w-md shadow-2xl">
+                <div class="flex justify-between items-center mb-4 border-b pb-3">
+                    <h3 class="text-lg font-bold text-orbis-navy font-display"><i class="fa-solid fa-user-pen text-blue-600 mr-2"></i>Edit User</h3>
+                    <button onclick="closeModal('editUserModal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                <form id="editUserForm" onsubmit="saveUserEdit(event)" class="flex flex-col gap-2.5">
+                    <input type="text" id="euName" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="Full name">
+                    <input type="email" id="euEmail" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="Email">
+                    <input type="tel" id="euMobile" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="Mobile number">
+                    <input type="text" id="euAddress" class="w-full px-3.5 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-orbis-navy" placeholder="Address">
+                    <label class="block text-xs font-bold text-orbis-navy/70 uppercase ml-1">Role</label>
+                    <select id="euRole" class="w-full px-3.5 py-2.5 border rounded-xl text-sm bg-white text-orbis-navy font-semibold">
+                        <option value="Consumer">Resident</option>
+                        <option value="MeterReader">Meter Reader</option>
+                    </select>
+                    <div class="flex gap-2 mt-2">
+                        <button type="button" onclick="closeModal('editUserModal')" class="flex-1 py-3 rounded-xl font-semibold bg-gray-100 text-orbis-navy">Cancel</button>
+                        <button type="submit" class="flex-1 py-3 rounded-xl font-semibold bg-orbis-navy text-white shadow-md">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- Customer Payments Modal (For Staff View) -->
         <div id="customerPaymentsModal" class="modal-overlay">
             <div class="bg-white p-6 rounded-3xl w-[90%] max-w-md shadow-2xl">
@@ -571,17 +651,7 @@
 
                 <h2 class="text-center text-white font-bold text-lg font-display mb-4">RESIDENT LOGIN</h2>
 
-                <div class="mb-5 bg-white/10 p-3 rounded-2xl">
-                    <p class="text-[10px] text-orbis-light font-bold uppercase text-center mb-2">Supabase Registered Accounts</p>
-                    <div class="grid grid-cols-2 gap-1.5 text-[11px]">
-                        <button type="button" onclick="fillDemo('12554368', 'Password123!')" class="bg-white/15 hover:bg-white/25 text-white py-1.5 px-2 rounded-lg text-left truncate">
-                            <i class="fa-solid fa-user mr-1 text-[10px]"></i>Rico Ramos
-                        </button>
-                        <button type="button" onclick="fillDemo('KT-123', 'Password123!')" class="bg-white/15 hover:bg-white/25 text-white py-1.5 px-2 rounded-lg text-left truncate">
-                            <i class="fa-solid fa-user mr-1 text-[10px]"></i>Katarina Son
-                        </button>
-                    </div>
-                </div>
+                
 
                 <form id="loginForm" class="flex flex-col gap-4">
                     <div>
@@ -644,12 +714,18 @@
                     <div>
                         <label class="block text-xs font-bold text-orbis-light uppercase tracking-wider mb-1 ml-1">New Password</label>
                         <div class="relative">
-                            <input type="password" id="newPass" class="w-full px-4 py-3 pr-11 bg-orbis-navyDeep border border-white/15 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-light" placeholder="Min 8 chars, Upper/Lower/Num">
+                            <input type="password" id="newPass" oninput="renderPwRules('newPass','otpRules')" class="w-full px-4 py-3 pr-11 bg-orbis-navyDeep border border-white/15 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-light" placeholder="Min 8 chars, Upper/Lower/Num">
                             <button type="button" onclick="togglePassword('newPass', 'otpEyeIcon')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white">
                                 <i id="otpEyeIcon" class="fa-solid fa-eye"></i>
                             </button>
                         </div>
                     </div>
+                    <div id="otpRules" class="ml-1"></div>
+                    <div>
+                        <label class="block text-xs font-bold text-orbis-light uppercase tracking-wider mb-1 ml-1">Confirm New Password</label>
+                        <input type="password" id="newPassConfirm" class="w-full px-4 py-3 bg-orbis-navyDeep border border-white/15 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-light" placeholder="Re-enter new password">
+                    </div>
+                    <button type="button" onclick="resendResetOtp()" class="text-[11px] text-orbis-light font-bold text-center"><i class="fa-solid fa-rotate mr-1"></i>Resend code (wait 60 seconds between codes)</button>
                     <button type="submit" class="mt-2 w-full bg-green-500 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">
                         Verify OTP & Update Password
                     </button>
@@ -694,6 +770,10 @@
                             <input type="tel" id="regMobile" class="w-full px-4 py-3 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="09xx xxx xxxx">
                         </div>
                         <div>
+                            <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Email</label>
+                            <input type="email" id="regEmail" autocomplete="off" class="w-full px-4 py-3 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="name@example.com">
+                        </div>
+                        <div>
                             <label class="block text-xs font-bold text-orbis-navy/70 uppercase tracking-wider mb-1 ml-1">Password</label>
                             <div class="relative">
                                 <input type="password" id="regPassword" oninput="renderPwRules('regPassword','regRules')" class="w-full px-4 py-3 pr-11 bg-white border border-white rounded-xl text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy shadow-sm" placeholder="Min 8 chars, Upper, Lower, Num, Special">
@@ -736,9 +816,7 @@
                     <h1 class="text-xl font-bold text-orbis-navy font-display text-center">ORBIS Staff Reviewer</h1>
                     <p class="text-xs text-orbis-navy/60 text-center mt-1 mb-5">Verify Submissions & Endorse to Admin</p>
 
-                    <button type="button" onclick="fillStaffDemo('STF-2201', 'Password123!')" class="w-full mb-4 bg-orbis-navy/10 border border-orbis-navy/20 py-2 px-3 rounded-xl text-xs font-semibold text-orbis-navy hover:bg-orbis-navy/20 transition-colors flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-user-check"></i> Fill Staff Demo: Faye Santos (STF-2201)
-                    </button>
+                    
 
                     <form id="staffLoginForm" class="w-full flex flex-col gap-4">
                         <div class="bg-white rounded-2xl p-3.5 shadow-sm">
@@ -785,6 +863,10 @@
 
                 <div class="px-4 pt-2 space-y-2.5" id="customerListContainer">
                     <!-- Dynamic customer list rendering -->
+                </div>
+                <div class="px-4 pt-4 grid grid-cols-2 gap-2">
+                    <button onclick="openChangePassword()" class="bg-white border border-orbis-navy/15 text-orbis-navy font-bold py-2.5 rounded-xl text-xs"><i class="fa-solid fa-key mr-1"></i>Change Password</button>
+                    <button onclick="openChangeEmail()" class="bg-white border border-orbis-navy/15 text-orbis-navy font-bold py-2.5 rounded-xl text-xs"><i class="fa-solid fa-envelope mr-1"></i>Change Email</button>
                 </div>
 
                 <div class="bottom-nav staff-nav">
@@ -854,9 +936,7 @@
                     <h1 class="text-xl font-bold text-orbis-navy font-display text-center">ORBIS Admin Console</h1>
                     <p class="text-xs text-orbis-navy/60 text-center mt-1 mb-5">Executive Approvals & Control</p>
 
-                    <button type="button" onclick="fillAdminDemo()" class="w-full mb-4 bg-orbis-navy/10 border border-orbis-navy/20 py-2 px-3 rounded-xl text-xs font-semibold text-orbis-navy hover:bg-orbis-navy/20 transition-colors flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-shield-halved"></i> Fill Admin Demo (admin_ormoc)
-                    </button>
+                    
 
                     <form id="adminLoginForm" class="w-full flex flex-col gap-4">
                         <div class="bg-white rounded-2xl p-3.5 shadow-sm">
@@ -1220,11 +1300,13 @@
                     <h2 class="font-bold text-orbis-navy font-display text-lg" id="pName">Rico Ramos</h2>
                     <p class="text-xs text-gray-500 mb-2" id="pAccount">Account No. 12554368</p>
                     <p class="text-xs text-gray-400 mb-1" id="pAddress">Brgy. Linao, Ormoc City</p>
-                    <p class="text-xs text-gray-400 mb-6" id="pMobile"></p>
+                    <p class="text-xs text-gray-400 mb-1" id="pMobile"></p>
+                    <p class="text-xs text-gray-400 mb-6" id="pEmail"></p>
                     <button id="editProfileBtn" onclick="openEditProfile()" class="hidden w-full bg-white text-orbis-navy font-bold py-3.5 rounded-xl shadow mb-3 active:scale-95 transition-transform">
                         <i class="fa-solid fa-user-pen mr-2"></i>Edit Profile
                     </button>
                     <button onclick="openChangePassword()" class="w-full bg-white text-orbis-navy font-bold py-3.5 rounded-xl shadow mb-3 active:scale-95 transition-transform"><i class="fa-solid fa-key mr-2"></i>Change Password</button>
+                    <button onclick="openChangeEmail()" class="w-full bg-white text-orbis-navy font-bold py-3.5 rounded-xl shadow mb-3 active:scale-95 transition-transform"><i class="fa-solid fa-envelope mr-2"></i>Change Email</button>
                     <button onclick="openModal('logoutModal')" class="w-full bg-red-500 text-white font-bold py-3.5 rounded-xl shadow-lg active:scale-95 transition-transform">
                         <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>Log Out
                     </button>
@@ -1280,6 +1362,10 @@
                             <p class="text-center text-xs text-gray-400 py-6">Loading unpaid bills...</p>
                         </div>
                     </div>
+                <div class="px-4 pt-4 grid grid-cols-2 gap-2">
+                    <button onclick="openChangePassword()" class="bg-white border border-orbis-navy/15 text-orbis-navy font-bold py-2.5 rounded-xl text-xs"><i class="fa-solid fa-key mr-1"></i>Change Password</button>
+                    <button onclick="openChangeEmail()" class="bg-white border border-orbis-navy/15 text-orbis-navy font-bold py-2.5 rounded-xl text-xs"><i class="fa-solid fa-envelope mr-1"></i>Change Email</button>
+                </div>
 
                 </div>
                 <div class="bottom-nav staff-nav">
@@ -1323,7 +1409,15 @@
                                 <i class="fa-solid fa-database"></i>
                                 <span>Backup & Recovery</span>
                             </button>
-                            <button class="admin-nav-item mt-auto text-red-400 hover:text-red-300" onclick="openModal('logoutModal')">
+                            <button class="admin-nav-item mt-auto" onclick="openChangePassword()">
+                                <i class="fa-solid fa-key"></i>
+                                <span>Change Password</span>
+                            </button>
+                            <button class="admin-nav-item" onclick="openChangeEmail()">
+                                <i class="fa-solid fa-envelope"></i>
+                                <span>Change Email</span>
+                            </button>
+                            <button class="admin-nav-item text-red-400 hover:text-red-300" onclick="openModal('logoutModal')">
                                 <i class="fa-solid fa-right-from-bracket"></i>
                                 <span>Log Out</span>
                             </button>
@@ -1466,6 +1560,7 @@
 
     <!-- STAFF LIST (Admin + Meter Readers) -->
     <div id="dirPanelStaff" class="overflow-x-auto">
+        <input type="text" id="staffSearch" oninput="renderStaffTable()" placeholder="Search name, staff ID or email" class="mb-3 w-full max-w-sm px-3 py-2 border rounded-xl text-xs text-orbis-navy focus:ring-2 focus:ring-orbis-navy">
         <table class="w-full text-left border-collapse text-xs">
             <thead>
                 <tr class="border-b border-gray-200 text-gray-400">
@@ -1473,6 +1568,7 @@
                     <th class="py-2 px-3">Full Name</th>
                     <th class="py-2 px-3">Staff ID</th>
                     <th class="py-2 px-3">Role</th>
+                    <th class="py-2 px-3">Status</th>
                     <th class="py-2 px-3">Mobile</th>
                     <th class="py-2 px-3 text-right">Action</th>
                 </tr>
@@ -1499,6 +1595,7 @@
                         <th class="py-2 px-3">Full Name</th>
                         <th class="py-2 px-3">Account Number</th>
                         <th class="py-2 px-3">Address</th>
+                        <th class="py-2 px-3">Status</th>
                         <th class="py-2 px-3">Mobile</th>
                         <th class="py-2 px-3 text-right">Action</th>
                     </tr>
@@ -1577,6 +1674,14 @@
                                     <button onclick="showAllAuditLogs()" class="bg-gray-100 text-orbis-navy text-xs font-bold px-3 py-1 rounded-full active:scale-95 transition-transform">Show All</button>
                                 </div>
                             </div>
+                            <div class="flex flex-wrap gap-2 mb-3">
+                                <input type="text" id="auditSearch" oninput="renderAuditLogs()" placeholder="Search user or details" class="flex-1 min-w-[160px] px-3 py-2 border rounded-xl text-xs text-orbis-navy focus:ring-2 focus:ring-orbis-navy">
+                                <select id="auditActionFilter" onchange="renderAuditLogs()" class="px-3 py-2 border rounded-xl text-xs text-orbis-navy"><option value="">All actions</option></select>
+                                <select id="auditResultFilter" onchange="renderAuditLogs()" class="px-3 py-2 border rounded-xl text-xs text-orbis-navy"><option value="">All results</option><option value="Success">Success</option><option value="Failure">Failure</option></select>
+                                <input type="date" id="auditFrom" onchange="renderAuditLogs()" class="px-3 py-2 border rounded-xl text-xs text-orbis-navy" title="From date">
+                                <input type="date" id="auditTo" onchange="renderAuditLogs()" class="px-3 py-2 border rounded-xl text-xs text-orbis-navy" title="To date">
+                                <button onclick="clearAuditFilters()" class="bg-gray-100 text-orbis-navy text-xs font-bold px-3 py-2 rounded-xl">Clear filters</button>
+                            </div>
                             <div class="overflow-x-auto max-h-[520px] overflow-y-auto rounded-xl border border-gray-100">
                                 <table class="w-full text-left border-collapse text-xs">
                                     <thead class="sticky top-0 bg-white border-b border-gray-200 text-gray-400 shadow-sm z-10">
@@ -1584,11 +1689,14 @@
                                             <th class="py-2.5 px-3 bg-white">Timestamp</th>
                                             <th class="py-2.5 px-3 bg-white">User / Role</th>
                                             <th class="py-2.5 px-3 bg-white">Action Type</th>
-                                            <th class="py-2.5 px-3 bg-white">Details / Status</th>
+                                            <th class="py-2.5 px-3 bg-white">Module</th>
+                                            <th class="py-2.5 px-3 bg-white">Details</th>
+                                            <th class="py-2.5 px-3 bg-white">IP Address</th>
+                                            <th class="py-2.5 px-3 bg-white">Result</th>
                                         </tr>
                                     </thead>
                                     <tbody id="auditTrailTable">
-                                        <tr><td colspan="4" class="text-center py-6 text-gray-400">Loading audit log trails...</td></tr>
+                                        <tr><td colspan="7" class="text-center py-6 text-gray-400">Loading audit log trails...</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -1606,6 +1714,8 @@
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpcnh6cW9iZ2l4c2R3ZXhva3NxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwMTM4MzcsImV4cCI6MjEwNzU4OTgzN30.TbCZX8DiVu9Recs4H8R6z63j12xl8U9L24qP67oL5xk";
 
         let currentUser = null;
+        let sessionToken = null;     // random token of this login (saved in user_sessions)
+        let otpChallenge = null;     // OTP popup that is waiting for a code
         let activeUserBill = null;
         // lockout is saved in the browser, so refreshing the page does not remove it
         let clientIp = 'unknown';
@@ -1695,21 +1805,6 @@
             }
             return map;
         }
-        function fillDemo(acct, pass) {
-            document.getElementById('loginUser').value = acct;
-            document.getElementById('loginPass').value = pass;
-            showToast('Demo credentials filled for account ' + acct, 'info');
-        }
-        function fillStaffDemo(id, pass) {
-            document.getElementById('staffId').value = id;
-            document.getElementById('staffPassword').value = pass;
-            showToast('Staff credentials filled for Faye Santos', 'info');
-        }
-        function fillAdminDemo() {
-            document.getElementById('adminUser').value = 'admin_ormoc';
-            document.getElementById('adminPass').value = 'Password123!';
-            showToast('Admin credentials filled', 'info');
-        }
         function showToast(message, type = 'info') {
             const toast = document.getElementById('toast');
             const msgEl = document.getElementById('toastMessage');
@@ -1732,7 +1827,24 @@
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 4000);
         }
+        // which role may open which page (also the server must check, see orbis_security_update.sql)
+        const VIEW_ROLE = {
+            adminDashView: 'Admin',
+            staffCustomersView: 'MeterReader', customerProfileView: 'MeterReader', staffDashboardView: 'MeterReader',
+            consumerDashView: 'Consumer', billView: 'Consumer', billStatementView: 'Consumer', receiptView: 'Consumer',
+            notificationsView: 'Consumer', paymentHistoryView: 'Consumer', payBillView: 'Consumer',
+            confirmationView: 'Consumer', waterUsageView: 'Consumer', profileView: 'Consumer'
+        };
         function switchView(viewId) {
+            const need = VIEW_ROLE[viewId];
+            if (need) {
+                const have = currentUser ? (currentUser.role || 'Consumer') : null;
+                if (have !== need) {
+                    addAuditRow(currentUser ? currentUser.user_id : null, have || 'Guest', 'Unauthorized Access', `Tried to open ${viewId} without permission`, 'red', 'Failure');
+                    showToast('You are not allowed to open that page.', 'error');
+                    return;
+                }
+            }
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
             document.getElementById('deviceFrame').classList.toggle('ipad', viewId === 'adminLoginView' || viewId === 'adminDashView');
@@ -1755,6 +1867,7 @@
                 const isResident = currentUser && (currentUser.role || 'Consumer') === 'Consumer';
                 document.getElementById('editProfileBtn').classList.toggle('hidden', !isResident);
                 document.getElementById('pMobile').textContent = (isResident && currentUser.mobile_number) ? currentUser.mobile_number : '';
+                document.getElementById('pEmail').textContent = (isResident && currentUser) ? (currentUser.email || 'No email on file') : '';
             }
         }
         async function populateBillAccountDropdown(selectedAccountNo = null) {
@@ -1806,6 +1919,9 @@
         const authChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('orbis-auth') : null;
         function endSessionLocally() {
             document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+            if (otpChallenge) { const c = otpChallenge; otpChallenge = null; c.resolve(false); }
+            const t = sessionToken; sessionToken = null;
+            if (t) dbFetch('user_sessions', { method: 'PATCH', query: `session_token=eq.${t}`, body: { ended_at: new Date().toISOString() } });
             currentUser = null;
             activeUserBill = null;
             switchView('roleSelectView');
@@ -1892,6 +2008,7 @@
             const done = await dbFetch('users', { method: 'PATCH', query: `user_id=eq.${currentUser.user_id}`, body: { password_hash: newHash } });
             if (!done || done.length === 0) return showToast('Could not change the password. Please try again.', 'error');
             currentUser.password_hash = newHash;
+            await endOtherSessions(currentUser.user_id);   // every other session of this user is closed
             closeModal('changePassModal');
             addAuditRow(currentUser.user_id, currentUser.role, 'Password Changed', 'User changed their own password', 'blue');
             if (authChannel) authChannel.postMessage({ type: 'pw', uid: currentUser.user_id, tab: TAB_ID });
@@ -1942,6 +2059,9 @@
         async function downloadBackup(id) {
             const data = await dbFetch('rpc/orbis_get_backup', { method: 'POST', body: backupArgs({ p_id: id }) });
             if (!data) return showToast('Could not download this backup.', 'error');
+            // the downloaded file never contains password hashes or OTP codes
+            if (Array.isArray(data.users)) data.users = data.users.map(({ password_hash, ...rest }) => rest);
+            if (Array.isArray(data.otp_codes)) data.otp_codes = [];
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
@@ -2058,7 +2178,7 @@
             if (role === 'Consumer') return 'Resident';
             return role || 'Resident';
         }
-        async function addAuditRow(userId, role, action, details, color = 'blue') {
+        async function addAuditRow(userId, role, action, details, color = 'blue', result = null, module = null) {
             // 1) use the id given if it is a number
             // 2) if not, use the real user who is logged in right now
             // 3) if nobody is logged in (example: wrong password), save it as unknown (null)
@@ -2068,19 +2188,20 @@
             } else if (currentUser && typeof currentUser.user_id === 'number') {
                 realId = currentUser.user_id;
             }
-            const body = {
+            const full = {
                 user_id: realId,
                 user_role: normalizeRole(role),
                 action: action,
                 details: details,
-                ip_address: clientIp
+                ip_address: clientIp,
+                module: module || inferAuditModule(action),
+                result: result || inferAuditResult(action)
             };
-
-            let result = await dbFetch('audit_logs', { method: 'POST', body });
-            // if the database does not accept an empty user, save it with the fallback id so the log is not lost
-            if (result === null && realId === null) {
-                body.user_id = 2;
-                await dbFetch('audit_logs', { method: 'POST', body });
+            const { module: _m, result: _r, ...plain } = full;   // fallback if the new columns do not exist yet
+            for (const body of [full, plain]) {
+                if (await dbFetch('audit_logs', { method: 'POST', body }) !== null) return;
+                // if the database does not accept an empty user, save it with the fallback id so the log is not lost
+                if (realId === null && await dbFetch('audit_logs', { method: 'POST', body: { ...body, user_id: 2 } }) !== null) return;
             }
         }
         async function addPaymentLog(action, performedBy, details) {
@@ -2172,14 +2293,14 @@
                 return;
             }
             container.innerHTML = filtered.map(c => `
-                <div onclick="openCustomerProfile('${c.accountNo}')" class="bg-white rounded-2xl p-3.5 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer active:scale-98 transition-transform">
+                <div data-acct="${escapeHtml(c.accountNo)}" onclick="openCustomerProfile(this.dataset.acct)" class="bg-white rounded-2xl p-3.5 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer active:scale-98 transition-transform">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-full bg-orbis-navy/10 flex items-center justify-center text-orbis-navy font-bold text-xs">
-                            ${c.name.split(' ').map(n=>n[0]).join('')}
+                            ${escapeHtml(c.name.split(' ').map(n=>n[0]).join(''))}
                         </div>
                         <div>
-                            <h4 class="font-bold text-xs text-orbis-navy">${c.name}</h4>
-                            <p class="text-[10px] text-gray-400">Acct #${c.accountNo} · ${c.brgy}</p>
+                            <h4 class="font-bold text-xs text-orbis-navy">${escapeHtml(c.name)}</h4>
+                            <p class="text-[10px] text-gray-400">Acct #${escapeHtml(c.accountNo)} · ${escapeHtml(c.brgy)}</p>
                         </div>
                     </div>
                     <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full ${customerBadgeClass(c.status)}">
@@ -2260,7 +2381,7 @@
                     container.innerHTML = payments.map(p => `
                         <div class="bg-gray-50 border p-3 rounded-xl flex justify-between items-center text-xs">
                             <div>
-                                <p class="font-bold text-orbis-navy">${p.payment_method} (${p.reference_number})</p>
+                                <p class="font-bold text-orbis-navy">${escapeHtml(p.payment_method)} (${escapeHtml(p.reference_number)})</p>
                                 <p class="text-[10px] text-gray-500">${p.created_at ? p.created_at.slice(0, 10) : 'Recent'}</p>
                             </div>
                             <div class="text-right">
@@ -2275,7 +2396,8 @@
 
             container.innerHTML = '<p class="text-center text-xs text-gray-400 py-6">No payment history on record for this account.</p>';
         }
-        async function flagForDisconnection() {
+        async function _flagForDisconnection() {
+            if (!requireRole('MeterReader')) return;
             if (!selectedCustomer) return;
 
             let targetUserId = selectedCustomer.userId;
@@ -2873,6 +2995,7 @@
 
         document.getElementById('createBillForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            if (!requireRole('MeterReader')) return;
             const selectedAcct = document.getElementById('billAccountNum').value.trim();
 
             if (!selectedAcct) {
@@ -2947,7 +3070,8 @@
             const price = u => (u <= block ? charge : charge + (u - block) * rate).toFixed(2);
             el.textContent = `Example bills:  ${block} cu.m. = ₱${price(block)}   |   ${block + 9} cu.m. = ₱${price(block + 9)}   |   ${block + 10} cu.m. = ₱${price(block + 10)}`;
         }
-        async function saveRates() {
+        async function _saveRates() {
+            if (!requireRole('Admin')) return;
             const g = id => parseFloat(document.getElementById(id).value);
             const vals = {
                 minimum_charge: g('rateFirstCharge'),
@@ -3024,10 +3148,12 @@
         }
         function renderStaffTable() {
             const table = document.getElementById('adminStaffTable');
-            const staff = directoryUsers.filter(u => (u.role || 'Consumer') !== 'Consumer');
-            document.getElementById('dirCountStaff').textContent = staff.length;
+            const term = (document.getElementById('staffSearch').value || '').trim().toLowerCase();
+            const all = directoryUsers.filter(u => (u.role || 'Consumer') !== 'Consumer');
+            document.getElementById('dirCountStaff').textContent = all.length;
+            const staff = all.filter(u => !term || `${u.full_name || ''} ${u.water_account_number || ''} ${u.email || ''}`.toLowerCase().includes(term));
             if (staff.length === 0) {
-                table.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">No staff accounts yet.</td></tr>';
+                table.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-400">No staff accounts found.</td></tr>';
                 return;
             }
             table.innerHTML = '';
@@ -3039,21 +3165,22 @@
                     actions = '<span class="text-[10px] font-bold text-purple-600"><i class="fa-solid fa-lock mr-1"></i>Protected</span>';
                 } else {
                     const resetBtn = role === 'MeterReader'
-                        ? `<button data-name="${nameAttr}" data-acct="${escapeHtml(u.water_account_number || '')}" onclick="askResetStaffPassword(${u.user_id}, this.dataset.name, this.dataset.acct)" class="bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold px-2.5 py-1 rounded-lg text-xs transition-colors mr-1"><i class="fa-solid fa-key mr-1"></i>Reset Password</button>`
+                        ? `<button data-name="${nameAttr}" data-acct="${escapeHtml(u.water_account_number || '')}" onclick="askResetStaffPassword(${u.user_id}, this.dataset.name, this.dataset.acct)" class="bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold px-2 py-1 rounded-lg text-[11px] mr-1 mb-1"><i class="fa-solid fa-key mr-1"></i>Reset Password</button>`
                         : '';
-                    actions = `${resetBtn}<button data-name="${nameAttr}" onclick="deleteUserByAdmin(${u.user_id}, this.dataset.name, '${role}')" class="bg-red-100 hover:bg-red-200 text-red-600 font-bold px-2.5 py-1 rounded-lg text-xs transition-colors"><i class="fa-solid fa-trash-can mr-1"></i>Delete</button>`;
+                    actions = `${adminUserButtons(u)}${resetBtn}<button data-name="${nameAttr}" data-role="${escapeHtml(role || '')}" onclick="deleteUserByAdmin(${u.user_id}, this.dataset.name, this.dataset.role)" class="bg-red-100 hover:bg-red-200 text-red-600 font-bold px-2 py-1 rounded-lg text-[11px] mb-1"><i class="fa-solid fa-trash-can mr-1"></i>Delete</button>`;
                 }
                 const row = document.createElement('tr');
                 row.className = 'border-b border-gray-100 hover:bg-gray-50/50 transition-colors';
                 row.innerHTML = `
                     <td class="py-2.5 px-3 font-bold">${u.user_id}</td>
-                    <td class="py-2.5 px-3 font-semibold text-orbis-navy">${nameAttr}</td>
+                    <td class="py-2.5 px-3 font-semibold text-orbis-navy">${nameAttr}<br><span class="text-[10px] text-gray-400 font-normal">${escapeHtml(u.email || 'no email')}</span></td>
                     <td class="py-2.5 px-3 font-mono">${escapeHtml(u.water_account_number || '')}</td>
                     <td class="py-2.5 px-3">
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${role === 'Admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">${escapeHtml(normalizeRole(role))}</span>
                     </td>
+                    <td class="py-2.5 px-3">${userStatusBadges(u)}</td>
                     <td class="py-2.5 px-3 text-gray-500">${escapeHtml(u.mobile_number || 'N/A')}</td>
-                    <td class="py-2.5 px-3 text-right whitespace-nowrap">${actions}</td>
+                    <td class="py-2.5 px-3 text-right">${actions}</td>
                 `;
                 table.appendChild(row);
             });
@@ -3076,14 +3203,14 @@
             const filtered = residents.filter(u => {
                 if (select.value && getBarangay(u.address) !== select.value) return false;
                 if (term) {
-                    const text = `${u.full_name || ''} ${u.water_account_number || ''}`.toLowerCase();
+                    const text = `${u.full_name || ''} ${u.water_account_number || ''} ${u.email || ''}`.toLowerCase();
                     if (!text.includes(term)) return false;
                 }
                 return true;
             });
 
             if (filtered.length === 0) {
-                table.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-gray-400">No residents found.</td></tr>';
+                table.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-400">No residents found.</td></tr>';
                 return;
             }
             // group by barangay
@@ -3098,7 +3225,7 @@
             table.innerHTML = '';
             names.forEach(name => {
                 const header = document.createElement('tr');
-                header.innerHTML = `<td colspan="6" class="py-2 px-3 bg-orbis-off text-orbis-navy font-bold text-[11px] uppercase tracking-wider border-b border-gray-200"><i class="fa-solid fa-location-dot mr-2 text-[10px]"></i>${name === 'No barangay' ? 'No barangay' : 'Brgy. ' + escapeHtml(name)} <span class="text-gray-400 font-semibold normal-case">(${groups[name].length})</span></td>`;
+                header.innerHTML = `<td colspan="7" class="py-2 px-3 bg-orbis-off text-orbis-navy font-bold text-[11px] uppercase tracking-wider border-b border-gray-200"><i class="fa-solid fa-location-dot mr-2 text-[10px]"></i>${name === 'No barangay' ? 'No barangay' : 'Brgy. ' + escapeHtml(name)} <span class="text-gray-400 font-semibold normal-case">(${groups[name].length})</span></td>`;
                 table.appendChild(header);
                 groups[name].forEach(u => {
                     const nameAttr = escapeHtml(u.full_name || '');
@@ -3106,11 +3233,12 @@
                     row.className = 'border-b border-gray-100 hover:bg-gray-50/50 transition-colors';
                     row.innerHTML = `
                         <td class="py-2.5 px-3 font-bold">${u.user_id}</td>
-                        <td class="py-2.5 px-3 font-semibold text-orbis-navy">${nameAttr}</td>
+                        <td class="py-2.5 px-3 font-semibold text-orbis-navy">${nameAttr}<br><span class="text-[10px] text-gray-400 font-normal">${escapeHtml(u.email || 'no email')}</span></td>
                         <td class="py-2.5 px-3 font-mono">${escapeHtml(u.water_account_number || '')}</td>
                         <td class="py-2.5 px-3 text-gray-500">${escapeHtml(u.address || 'Ormoc City')}</td>
+                        <td class="py-2.5 px-3">${userStatusBadges(u)}</td>
                         <td class="py-2.5 px-3 text-gray-500">${escapeHtml(u.mobile_number || 'N/A')}</td>
-                        <td class="py-2.5 px-3 text-right whitespace-nowrap"><button data-name="${nameAttr}" onclick="deleteUserByAdmin(${u.user_id}, this.dataset.name, 'Consumer')" class="bg-red-100 hover:bg-red-200 text-red-600 font-bold px-2.5 py-1 rounded-lg text-xs transition-colors"><i class="fa-solid fa-trash-can mr-1"></i>Delete</button></td>
+                        <td class="py-2.5 px-3 text-right">${adminUserButtons(u)}<button data-name="${nameAttr}" onclick="deleteUserByAdmin(${u.user_id}, this.dataset.name, 'Consumer')" class="bg-red-100 hover:bg-red-200 text-red-600 font-bold px-2 py-1 rounded-lg text-[11px] mb-1"><i class="fa-solid fa-trash-can mr-1"></i>Delete</button></td>
                     `;
                     table.appendChild(row);
                 });
@@ -3128,12 +3256,13 @@
         async function saveProfile(e) {
             e.preventDefault();
             if (!currentUser) return;
-            const name = document.getElementById('editProfName').value.trim();
-            const addr = document.getElementById('editProfAddress').value.trim();
+            const name = cleanText(document.getElementById('editProfName').value, 60);
+            const addr = cleanText(document.getElementById('editProfAddress').value, 120);
             const mobile = document.getElementById('editProfMobile').value.trim();
 
             if (!name || !addr || !mobile) return showToast('Please fill in all fields.', 'error');
-            if (!/^[0-9+\s-]{10,15}$/.test(mobile)) return showToast('Please enter a valid mobile number.', 'error');
+            if (!isValidName(name)) return showToast('Full name can only have letters, spaces, . \' and -.', 'error');
+            if (!isValidMobile(mobile)) return showToast('Please enter a valid mobile number (09xx xxx xxxx).', 'error');
 
             const done = await dbFetch('users', {
                 method: 'PATCH',
@@ -3209,8 +3338,8 @@
                     const row = document.createElement('tr');
                     row.className = 'border-b border-gray-100';
                     row.innerHTML = `
-                        <td class="py-3 px-3 font-semibold text-orbis-navy">${adminNameMap[b.userId] ? adminNameMap[b.userId] + '<br><span class="text-[10px] font-mono text-gray-400">' + b.accountNum + '</span>' : b.accountNum}</td>
-                        <td class="py-3 px-3">${formatPeriodRange(b.period)}</td>
+                        <td class="py-3 px-3 font-semibold text-orbis-navy">${adminNameMap[b.userId] ? escapeHtml(adminNameMap[b.userId]) + '<br><span class="text-[10px] font-mono text-gray-400">' + escapeHtml(b.accountNum) + '</span>' : escapeHtml(b.accountNum)}</td>
+                        <td class="py-3 px-3">${escapeHtml(formatPeriodRange(b.period))}</td>
                         <td class="py-3 px-3">${b.prevReading} / ${b.presReading}</td>
                         <td class="py-3 px-3 font-bold text-orbis-navy">₱${b.amount}</td>
                         <td class="py-3 px-3">${b.dueDate}</td>
@@ -3240,9 +3369,9 @@
                     row.className = 'border-b border-gray-100';
                     row.innerHTML = `
                         <td class="py-3 px-3 font-mono">PAY-${p.payment_id}</td>
-                        <td class="py-3 px-3 font-bold">${adminNameMap[p.user_id] || 'User ' + p.user_id}</td>
+                        <td class="py-3 px-3 font-bold">${escapeHtml(adminNameMap[p.user_id] || 'User ' + p.user_id)}</td>
                         <td class="py-3 px-3 font-extrabold text-orbis-navy">₱${parseFloat(p.amount).toFixed(2)}</td>
-                        <td class="py-3 px-3">${p.payment_method} (${p.reference_number})</td>
+                        <td class="py-3 px-3">${escapeHtml(p.payment_method)} (${escapeHtml(p.reference_number)})</td>
                         <td class="py-3 px-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Endorsed by Staff</span></td>
                         <td class="py-3 px-3 text-right">
                             <div class="flex justify-end gap-1.5">
@@ -3274,7 +3403,7 @@
                     row.className = 'border-b border-gray-100';
                     row.innerHTML = `
                         <td class="py-3 px-3 font-mono">BILL-${b.bill_id}</td>
-                        <td class="py-3 px-3 font-bold">${adminNameMap[b.user_id] || 'User ' + b.user_id}</td>
+                        <td class="py-3 px-3 font-bold">${escapeHtml(adminNameMap[b.user_id] || 'User ' + b.user_id)}</td>
                         <td class="py-3 px-3 font-extrabold text-red-600">₱${parseFloat(b.amount).toFixed(2)}</td>
                         <td class="py-3 px-3"><span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">Recommended for Cut-Off</span></td>
                         <td class="py-3 px-3 text-right">
@@ -3290,7 +3419,8 @@
                 cutoffsTable.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-400">No pending disconnection requests.</td></tr>';
             }
         }
-        async function approveAllBills() {
+        async function _approveAllBills() {
+            if (!requireRole('Admin')) return;
             const ids = pendingBillsQueue.map(b => b.id);
             if (ids.length === 0) {
                 return showToast('No new bills waiting for approval.', 'info');
@@ -3303,6 +3433,7 @@
             loadAdminData();
         }
         async function approveBillByAdmin(billId, silent) {
+            if (!requireRole('Admin')) return;
             const approved = pendingBillsQueue.find(b => b.id === billId);
             if (!approved) return false;
             const targetUserId = approved.userId;
@@ -3348,7 +3479,8 @@
             }
             return true;
         }
-        async function adminApprovePayment(paymentId, userId, amount) {
+        async function _adminApprovePayment(paymentId, userId, amount) {
+            if (!requireRole('Admin')) return;
             // Find the bill that is being paid: the resident's newest bill that is not Paid yet
             const openBills = await dbFetch('bills', {
                 method: 'GET',
@@ -3401,6 +3533,7 @@
             loadAdminData();
         }
         async function adminRejectPayment(paymentId, userId, reason) {
+            if (!requireRole('Admin')) return;
             const rejected = await dbFetch('payments', {
                 method: 'PATCH',
                 query: `payment_id=eq.${paymentId}`,
@@ -3417,7 +3550,8 @@
 
             loadAdminData();
         }
-        async function adminApproveCutoff(billId, userId) {
+        async function _adminApproveCutoff(billId, userId) {
+            if (!requireRole('Admin')) return;
             await dbFetch('bills', {
                 method: 'PATCH',
                 query: `bill_id=eq.${billId}`,
@@ -3613,47 +3747,86 @@
     }
 }
 
+        // ===== Shared login helpers =====
+        function dbLockActive(u) {
+            if (u.lockout_until && new Date(u.lockout_until) > new Date()) {
+                lockoutUntil = new Date(u.lockout_until); saveLockout();
+                showToast(`Account locked. Retry in ${Math.ceil((lockoutUntil - new Date()) / 1000)}s.`, 'error');
+                return true;
+            }
+            return false;
+        }
+        async function accountAllowed(u, label) {
+            if ((u.status || 'Active') === 'Inactive') {
+                showToast('This account is deactivated. Please contact the Admin.', 'error');
+                addAuditRow(u.user_id, label, 'Login Blocked', 'A deactivated account tried to log in', 'red', 'Failure');
+                return false;
+            }
+            if (u.is_locked) {
+                showToast('This account was locked by the Admin. Please contact the office.', 'error');
+                addAuditRow(u.user_id, label, 'Login Blocked', 'An Admin-locked account tried to log in', 'red', 'Failure');
+                return false;
+            }
+            return true;
+        }
+        async function finishLogin(u, pass) {
+            resetFailedAttempts();
+            if ((u.failed_attempts || 0) > 0 || u.lockout_until) {
+                dbFetch('users', { method: 'PATCH', query: `user_id=eq.${u.user_id}`, body: { failed_attempts: 0, lockout_until: null } });
+            }
+            currentUser = u;
+            upgradePasswordIfNeeded(currentUser, pass);
+            await startSession(currentUser);
+        }
+
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const account = document.getElementById('loginUser').value.trim();
             const pass = document.getElementById('loginPass').value.trim();
 
             if (!account || !pass) return showToast('Please enter water account and password.', 'error');
-
-            if (lockoutUntil && new Date() < lockoutUntil) {
-                const secs = Math.ceil((lockoutUntil - new Date()) / 1000);
-                return showToast(`Account locked. Retry in ${secs}s.`, 'error');
-            }
+            if (checkLockout()) return;
             if (failedAttempts >= 3 && !(await requireCaptcha())) return;
 
             const users = await dbFetch('users', {
                 method: 'GET',
-                query: `water_account_number=eq.${encodeURIComponent(account)}`
+                query: `water_account_number=eq.${encodeURIComponent(account)}&or=(role.eq.Consumer,role.is.null)`
             });
+            if (!users || users.length === 0) return handleFailedAttempt(account);
 
-            if (users && users.length > 0) {
-                if (!(await verifyPassword(pass, users[0].password_hash))) {
-                    return handleFailedAttempt(account);
+            const u = users[0];
+            if (dbLockActive(u)) return;
+            if (!(await verifyPassword(pass, u.password_hash))) return handleFailedAttempt(account);
+            if (!(await accountAllowed(u, 'Resident'))) return;
+
+            // first login: the resident must verify the account with an OTP
+            if (u.is_verified === false) {
+                const ok = await requestOtpChallenge(u.user_id, 'verify', 'Verify your account', null);
+                if (!ok) {
+                    addAuditRow(u.user_id, 'Resident', 'Account Verification Failed', 'First-login OTP was not completed', 'red', 'Failure');
+                    return showToast('Account not verified yet. Please log in again to get a new code.', 'error');
                 }
-                resetFailedAttempts();
-                currentUser = users[0];
-                upgradePasswordIfNeeded(currentUser, pass);
-                document.getElementById('cName').textContent = currentUser.full_name;
-                document.getElementById('pName').textContent = currentUser.full_name;
-                document.getElementById('pAccount').textContent = 'Account No. ' + currentUser.water_account_number;
-                if (currentUser.address) document.getElementById('pAddress').textContent = currentUser.address;
-
-                const initials = currentUser.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-                document.getElementById('cAvatar').textContent = initials || 'US';
-                document.getElementById('pAvatar').textContent = initials || 'US';
-
-                await loadUserBill(currentUser.user_id);
-                switchView('consumerDashView');
-                showToast('Welcome back, ' + currentUser.full_name, 'success');
-                addAuditRow(currentUser.user_id, 'Resident', 'Login Successful', 'Authenticated against users table', 'green');
-            } else {
-                handleFailedAttempt(account);
+                const done = await dbFetch('users', { method: 'PATCH', query: `user_id=eq.${u.user_id}`, body: { is_verified: true } });
+                if (!done || done.length === 0) return showToast('Could not finish the verification. Please try again.', 'error');
+                u.is_verified = true;
+                addAuditRow(u.user_id, 'Resident', 'Account Verified', 'Account verified with an OTP on first login', 'green');
             }
+
+            await finishLogin(u, pass);
+            document.getElementById('cName').textContent = currentUser.full_name;
+            document.getElementById('pName').textContent = currentUser.full_name;
+            document.getElementById('pAccount').textContent = 'Account No. ' + currentUser.water_account_number;
+            if (currentUser.address) document.getElementById('pAddress').textContent = currentUser.address;
+            document.getElementById('pEmail').textContent = currentUser.email || 'No email on file';
+
+            const initials = currentUser.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            document.getElementById('cAvatar').textContent = initials || 'US';
+            document.getElementById('pAvatar').textContent = initials || 'US';
+
+            await loadUserBill(currentUser.user_id);
+            switchView('consumerDashView');
+            showToast('Welcome back, ' + currentUser.full_name, 'success');
+            addAuditRow(currentUser.user_id, 'Resident', 'Login Successful', 'Authenticated against users table', 'green');
         });
 
         function checkLockout() {
@@ -3693,83 +3866,60 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
         body: { failed_attempts: failedAttempts, lockout_until: lockoutUntil ? lockoutUntil.toISOString() : null } });
 }
 
-        document.getElementById('otpForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // ===== Forgot password (OTP) =====
+        async function startResetOtp(showModal) {
             const acct = document.getElementById('otpAccount').value.trim();
-            if (!acct) return showToast('Enter water account number.', 'error');
+            if (!acct) { showToast('Enter water account number.', 'error'); return false; }
 
             const users = await dbFetch('users', {
                 method: 'GET',
                 query: `water_account_number=eq.${encodeURIComponent(acct)}`
             });
-
-            if (!users || users.length === 0) {
-                return showToast('Water account number was not found.', 'error');
-            }
+            if (!users || users.length === 0) { showToast('Water account number was not found.', 'error'); return false; }
             if ((users[0].role || 'Consumer') !== 'Consumer') {
-                return showToast(users[0].role === 'MeterReader' ? 'Staff passwords are reset by the Admin. Please ask the Admin.' : 'This account cannot be reset here.', 'error');
+                showToast(users[0].role === 'MeterReader' ? 'Staff passwords are reset by the Admin. Please ask the Admin.' : 'This account cannot be reset here.', 'error');
+                return false;
             }
-            const targetUserId = users[0].user_id;
+            const code = await issueOtp(users[0].user_id, 'reset', null);
+            if (!code) return false;
 
-            const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
-            const otpSaved = await dbFetch('otp_codes', {
-                method: 'POST',
-                body: {
-                    user_id: targetUserId,
-                    otp_code: generatedOtp,
-                    expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-                    is_used: false
-                }
-            });
-            if (!otpSaved) {
-                return showToast('Could not create the OTP. Please try again.', 'error');
-            }
-
-            document.getElementById('otpCodeDisplay').textContent = generatedOtp;
-            document.getElementById('demoOtpDisplay').textContent = generatedOtp;
-            
-            openModal('otpModal');
-
+            document.getElementById('otpCodeDisplay').textContent = code;
+            document.getElementById('demoOtpDisplay').textContent = code;
+            document.getElementById('otpInput').value = '';
+            if (showModal) openModal('otpModal');
             document.getElementById('otpForm').classList.add('hidden');
             document.getElementById('otpVerifyForm').classList.remove('hidden');
             document.getElementById('otpVerifyForm').classList.add('flex');
-
             showToast('OTP created. Use the code shown on this screen.', 'success');
-            addAuditRow(targetUserId, 'Resident', 'OTP Requested', 'A one-time code was created for this account', 'blue');
+            return true;
+        }
+        document.getElementById('otpForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await startResetOtp(true);
         });
+        async function resendResetOtp() { await startResetOtp(false); }
 
         document.getElementById('otpVerifyForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const otp = document.getElementById('otpInput').value.trim();
             const newPass = document.getElementById('newPass').value;
+            const confirmPass = document.getElementById('newPassConfirm').value;
             const acct = document.getElementById('otpAccount').value.trim();
+
+            if (!/^\d{6}$/.test(otp)) return showToast('Enter the 6-digit code.', 'error');
+            if (!STRONG_PASS.test(newPass)) return showToast('The new password does not follow the rules.', 'error');
+            if (newPass !== confirmPass) return showToast('Passwords do not match.', 'error');
 
             const owner = await dbFetch('users', {
                 method: 'GET',
                 query: `water_account_number=eq.${encodeURIComponent(acct)}&select=user_id,role`
             });
-            if (!owner || owner.length === 0) {
-                return showToast('Water account number was not found.', 'error');
-            }
-            if ((owner[0].role || 'Consumer') !== 'Consumer') {
-                return showToast('This account cannot be reset here.', 'error');
-            }
+            if (!owner || owner.length === 0) return showToast('Water account number was not found.', 'error');
+            if ((owner[0].role || 'Consumer') !== 'Consumer') return showToast('This account cannot be reset here.', 'error');
             const ownerId = owner[0].user_id;
 
-            // the OTP must belong to THIS account, must not be used yet, and must not be expired
-            const validOtp = await dbFetch('otp_codes', {
-                method: 'GET',
-                query: `user_id=eq.${ownerId}&otp_code=eq.${encodeURIComponent(otp)}&is_used=eq.false&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=1`
-            });
-            if (!validOtp || validOtp.length === 0) {
-                return showToast('Invalid or expired OTP code.', 'error');
-            }
-
-            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@\$!%*?&])[A-Za-z\d@$!\%*?&]{8,}$/;
-            if (!passwordRegex.test(newPass)) {
-                return showToast('Min 8 chars with upper, lower, number & special char required.', 'error');
-            }
+            const check = await verifyOtpCode(ownerId, 'reset', otp);
+            if (!check.ok) return showToast(check.msg, 'error');
 
             const passUpdated = await dbFetch('users', {
                 method: 'PATCH',
@@ -3777,41 +3927,43 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 body: { password_hash: await hashPassword(newPass) }
             });
             if (!passUpdated || passUpdated.length === 0) {
-                return showToast('Could not update the password. Please try again.', 'error');
+                return showToast('Could not update the password. Please request a new code and try again.', 'error');
             }
+            await endAllSessions(ownerId);   // every open session of this resident is closed
 
-            await dbFetch('otp_codes', {
-                method: 'PATCH',
-                query: `user_id=eq.${ownerId}&otp_code=eq.${encodeURIComponent(otp)}`,
-                body: { is_used: true }
-            });
-
-            showToast('OTP verified & password updated in database!', 'success');
+            showToast('Password updated. Please log in again.', 'success');
+            document.getElementById('otpVerifyForm').reset();
+            document.getElementById('otpRules').innerHTML = '';
             document.getElementById('otpVerifyForm').classList.add('hidden');
             document.getElementById('otpForm').classList.remove('hidden');
             switchView('loginView');
-            addAuditRow(acct, 'Resident', 'Password Reset', 'Password reset verified & updated in DB', 'green');
+            addAuditRow(ownerId, 'Resident', 'Password Reset', 'Password reset with a verified OTP; other sessions were closed', 'green');
         });
 
+        // ===== Register =====
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const role = 'Consumer';   // accounts made on this screen are always residents (the Admin creates staff accounts)
-            const name = document.getElementById('regFullName').value.trim();
+            const name = cleanText(document.getElementById('regFullName').value, 60);
             const account = document.getElementById('regAccountNumber').value.trim();
-            const acctName = document.getElementById('regAccountName').value.trim();
-            const addr = document.getElementById('regAddress').value.trim();
+            const acctName = cleanText(document.getElementById('regAccountName').value, 60);
+            const addr = cleanText(document.getElementById('regAddress').value, 120);
             const mobile = document.getElementById('regMobile').value.trim();
+            const email = document.getElementById('regEmail').value.trim().toLowerCase();
             const pass = document.getElementById('regPassword').value;
             const confirmPass = document.getElementById('regConfirmPassword').value;
 
-            if (!name || !account || !acctName || !addr || !mobile || !pass || !confirmPass) {
+            if (!name || !account || !acctName || !addr || !mobile || !email || !pass || !confirmPass) {
                 return showToast('Please fill in all registration fields.', 'error');
             }
-
+            if (!isValidName(name)) return showToast('Full name can only have letters, spaces, . \' and -.', 'error');
+            if (!isValidName(acctName)) return showToast('Water account name can only have letters, spaces, . \' and -.', 'error');
+            if (!isValidAccountNo(account)) return showToast('Account number can only have letters, numbers and dashes (3 to 20 characters).', 'error');
+            if (addr.length < 5) return showToast('Please enter a complete address.', 'error');
+            if (!isValidMobile(mobile)) return showToast('Please enter a valid mobile number (09xx xxx xxxx).', 'error');
+            if (!isValidEmail(email)) return showToast('Please enter a valid email address.', 'error');
             if (pass !== confirmPass) return showToast('Passwords do not match.', 'error');
-
-            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@\$!%*?&])[A-Za-z\d@$!\%*?&]{8,}$/;
-            if (!passwordRegex.test(pass)) {
+            if (!STRONG_PASS.test(pass)) {
                 return showToast('Min 8 chars, 1 uppercase, 1 lowercase, 1 number & 1 special char required.', 'error');
             }
 
@@ -3819,10 +3971,11 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 method: 'GET',
                 query: `water_account_number=eq.${encodeURIComponent(account)}`
             });
+            if (existingUsers === null) return showToast('Could not check the account number. Please try again.', 'error');
+            if (existingUsers.length > 0) return showToast(`Account ID ${account} is already registered.`, 'error');
 
-            if (existingUsers && existingUsers.length > 0) {
-                return showToast(`Account ID ${account} is already registered.`, 'error');
-            }
+            const emailUsed = await dbFetch('users', { method: 'GET', query: `email=eq.${encodeURIComponent(email)}&select=user_id` });
+            if (emailUsed && emailUsed.length > 0) return showToast('That email is already used by another account.', 'error');
 
             const newUser = await dbFetch('users', {
                 method: 'POST',
@@ -3832,8 +3985,11 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     water_account_name: acctName,
                     address: addr,
                     mobile_number: mobile,
+                    email: email,
                     password_hash: await hashPassword(pass),
-                    role: role
+                    role: role,
+                    status: 'Active',
+                    is_verified: false
                 }
             });
 
@@ -3859,77 +4015,61 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             addPaymentLog('Account Registered', name, `Created new ${role} account (${account})`);
             addAuditRow(createdUserId, role, 'Registration', `Created ${role} account for ${name}`, 'green');
 
-            showToast('Your account was created. You can log in now.', 'success');
+            showToast('Your account was created. Log in to verify it with an OTP.', 'success');
             document.getElementById('registerForm').reset();
+            document.getElementById('regRules').innerHTML = '';
             switchView('loginView');
         });
 
-        document.getElementById('staffLoginForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
+        // ===== Staff + Admin login =====
+        async function roleLogin(opts) {
+            if (checkLockout()) return;
+            if (failedAttempts >= 3 && !(await requireCaptcha())) return;
+            const id = document.getElementById(opts.idField).value.trim();
+            const pass = document.getElementById(opts.passField).value.trim();
+            if (!id || !pass) return showToast(opts.emptyMsg, 'error');
 
-    // Check if account is currently locked out
-    if (checkLockout()) return;
-    if (failedAttempts >= 3 && !(await requireCaptcha())) return;
+            const users = await dbFetch('users', {
+                method: 'GET',
+                query: `water_account_number=eq.${encodeURIComponent(id)}&role=eq.${opts.role}`
+            });
+            if (!users || users.length === 0) return handleFailedAttempt(id, opts.label);
 
-    const id = document.getElementById('staffId').value.trim();
-    const pass = document.getElementById('staffPassword').value.trim();
+            const u = users[0];
+            if (dbLockActive(u)) return;
+            if (!(await verifyPassword(pass, u.password_hash))) return handleFailedAttempt(id, opts.label);
+            if (!(await accountAllowed(u, opts.label))) return;
 
-    if (!id || !pass) return showToast('Please enter Staff ID and password.', 'error');
-
-    const users = await dbFetch('users', {
-        method: 'GET',
-        query: `water_account_number=eq.${encodeURIComponent(id)}&role=eq.MeterReader`
-    });
-
-    if (users && users.length > 0) {
-        const staffUser = users[0];
-        if (!(await verifyPassword(pass, staffUser.password_hash))) {
-            return handleFailedAttempt(id, 'Meter Reader');
+            await finishLogin(u, pass);
+            opts.onSuccess();
         }
-
-        // Reset counter on successful login
-        resetFailedAttempts();
-        currentUser = staffUser;
-        upgradePasswordIfNeeded(currentUser, pass);
-        document.getElementById('sName').textContent = currentUser.full_name;
-        const initials = currentUser.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-        document.getElementById('sAvatar').textContent = initials || 'ST';
-
-        switchView('staffCustomersView');
-        showToast(`Welcome, ${currentUser.full_name}!`, 'success');
-        addAuditRow(currentUser.user_id, 'Meter Reader', 'Staff Login', `Logged in as ${currentUser.full_name}`, 'green');
-    } else {
-        handleFailedAttempt(id, 'Meter Reader');
-    }
-});
-        document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    // Check if account is currently locked out
-    if (checkLockout()) return;
-    if (failedAttempts >= 3 && !(await requireCaptcha())) return;
-
-    const user = document.getElementById('adminUser').value.trim();
-    const pass = document.getElementById('adminPass').value.trim();
-
-    if (!user || !pass) return showToast('Please enter Admin ID and password.', 'error');
-
-    const users = await dbFetch('users', {
-        method: 'GET',
-        query: `water_account_number=eq.${encodeURIComponent(user)}&role=eq.Admin`
-    });
-
-    if (users && users.length > 0 && await verifyPassword(pass, users[0].password_hash)) {
-        resetFailedAttempts(); // Reset counter on success
-        currentUser = users[0];
-        upgradePasswordIfNeeded(currentUser, pass);
-        switchView('adminDashView');
-        showToast('Administrator Console Loaded.', 'success');
-        addAuditRow(currentUser.user_id, 'Admin', 'Admin Login', 'Authenticated admin session started', 'green');
-    } else {
-        handleFailedAttempt(user, 'Admin');
-    }
-});
+        document.getElementById('staffLoginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            roleLogin({
+                idField: 'staffId', passField: 'staffPassword', role: 'MeterReader', label: 'Meter Reader',
+                emptyMsg: 'Please enter Staff ID and password.',
+                onSuccess: () => {
+                    document.getElementById('sName').textContent = currentUser.full_name;
+                    const initials = currentUser.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                    document.getElementById('sAvatar').textContent = initials || 'ST';
+                    switchView('staffCustomersView');
+                    showToast(`Welcome, ${currentUser.full_name}!`, 'success');
+                    addAuditRow(currentUser.user_id, 'Meter Reader', 'Staff Login', `Logged in as ${currentUser.full_name}`, 'green');
+                }
+            });
+        });
+        document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            roleLogin({
+                idField: 'adminUser', passField: 'adminPass', role: 'Admin', label: 'Admin',
+                emptyMsg: 'Please enter Admin ID and password.',
+                onSuccess: () => {
+                    switchView('adminDashView');
+                    showToast('Administrator Console Loaded.', 'success');
+                    addAuditRow(currentUser.user_id, 'Admin', 'Admin Login', 'Authenticated admin session started', 'green');
+                }
+            });
+        });
 
         function goToPay() {
             switchView('payBillView');
@@ -4051,13 +4191,20 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
 
         document.getElementById('addStaffForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const name = document.getElementById('staffNewName').value.trim();
+            const name = cleanText(document.getElementById('staffNewName').value, 60);
             const staffId = document.getElementById('staffNewId').value.trim();
+            const email = document.getElementById('staffNewEmail').value.trim().toLowerCase();
             const mobile = document.getElementById('staffNewMobile').value.trim();
 
-            if (!name || !staffId || !mobile) {
-                return showToast('Please fill in the name, Staff ID and mobile number.', 'error');
+            if (!requireRole('Admin')) return;
+            if (!name || !staffId || !mobile || !email) {
+                return showToast('Please fill in the name, Staff ID, mobile number and email.', 'error');
             }
+            if (!isValidName(name)) return showToast('Name can only have letters, spaces, . \' and -.', 'error');
+            if (!isValidMobile(mobile)) return showToast('Please enter a valid mobile number (09xx xxx xxxx).', 'error');
+            if (!isValidEmail(email)) return showToast('Please enter a valid email address.', 'error');
+            const emailTaken = await dbFetch('users', { method: 'GET', query: `email=eq.${encodeURIComponent(email)}&select=user_id` });
+            if (emailTaken && emailTaken.length > 0) return showToast('That email is already used by another account.', 'error');
             if (!/^[A-Za-z0-9-]{3,20}$/.test(staffId)) {
                 return showToast('Staff ID can only have letters, numbers and dashes (3 to 20 characters).', 'error');
             }
@@ -4082,8 +4229,11 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     water_account_name: name,
                     address: 'Ormoc City Water Office',
                     mobile_number: mobile,
+                    email: email,
                     password_hash: await hashPassword(tempPassword),
-                    role: 'MeterReader'
+                    role: 'MeterReader',
+                    status: 'Active',
+                    is_verified: true
                 }
             });
             if (!created) {
@@ -4102,12 +4252,14 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
         let pendingStaffReset = null;
 
         function askResetStaffPassword(userId, name, staffId) {
+            if (!requireRole('Admin')) return;
             pendingStaffReset = { userId, name, staffId };
             document.getElementById('resetStaffText').textContent = `Make a new temporary password for ${name} (${staffId})? Their old password will stop working.`;
             openModal('resetStaffModal');
         }
 
         async function confirmResetStaffPassword() {
+            if (!requireRole('Admin')) return;
             if (!pendingStaffReset) return;
             const { userId, name, staffId } = pendingStaffReset;
             pendingStaffReset = null;
@@ -4131,6 +4283,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
 
         // Step 1: ask the Admin inside the app (no browser popup)
         function deleteUserByAdmin(userId, userName, role) {
+            if (!requireRole('Admin')) return;
             if (role === 'Admin') {
                 return showToast('The Admin account is protected and cannot be deleted.', 'error');
             }
@@ -4145,6 +4298,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
 
         // Step 2: the Admin pressed Delete
         async function confirmDeleteUser() {
+            if (!requireRole('Admin')) return;
             if (!pendingDeleteUser) return;
             const { userId, userName } = pendingDeleteUser;
             pendingDeleteUser = null;
@@ -4184,12 +4338,12 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     card.innerHTML = `
                         <div class="flex justify-between items-start mb-2">
                             <div>
-                                <p class="text-orbis-navy font-bold text-sm font-display">${nameMap[p.user_id] || 'Resident #' + p.user_id}</p>
-                                <p class="text-gray-400 text-[11px]">Ref: ${p.reference_number}</p>
+                                <p class="text-orbis-navy font-bold text-sm font-display">${escapeHtml(nameMap[p.user_id] || 'Resident #' + p.user_id)}</p>
+                                <p class="text-gray-400 text-[11px]">Ref: ${escapeHtml(p.reference_number)}</p>
                             </div>
                             <p class="text-orbis-navy font-bold text-sm">₱${p.amount}</p>
                         </div>
-                        <p class="text-gray-500 text-[11px] mb-3">${p.payment_method}</p>
+                        <p class="text-gray-500 text-[11px] mb-3">${escapeHtml(p.payment_method)}</p>
                         <div class="flex gap-2">
                             <button onclick="askRejectReason(${p.payment_id}, ${p.user_id}, 'staff')" class="flex-1 py-2 rounded-lg bg-red-50 text-red-500 text-xs font-bold">Reject</button>
                             <button onclick="verifyPaymentAction(${p.payment_id}, ${p.user_id}, 'endorse')" class="flex-1 py-2 rounded-lg bg-amber-500 text-white text-xs font-bold">
@@ -4221,7 +4375,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     card.innerHTML = `
                         <div class="flex justify-between items-start mb-1">
                             <div>
-                                <p class="text-orbis-navy font-bold text-sm font-display">${nameMap[b.user_id] || 'Resident #' + b.user_id}</p>
+                                <p class="text-orbis-navy font-bold text-sm font-display">${escapeHtml(nameMap[b.user_id] || 'Resident #' + b.user_id)}</p>
                             </div>
                             <span class="text-xs font-bold px-2 py-0.5 rounded-full ${['Overdue', 'Disconnection Warning', 'Cut-Off Requested', 'Cut-Off'].includes(b.status) ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}">${b.status}</span>
                         </div>
@@ -4274,6 +4428,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
         }
 
         async function verifyPaymentAction(paymentId, userId, action, reason) {
+            if (!requireRole('MeterReader')) return;
             if (!currentUser) {
                 showToast('Your session ended. Please log in again.', 'error');
                 switchView('staffLoginView');
@@ -4315,7 +4470,8 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             loadStaffData();
         }
 
-        async function issueCutoffWarning(billId, userId, actionType) {
+        async function _issueCutoffWarning(billId, userId, actionType) {
+            if (!requireRole('MeterReader')) return;
             const staffName = currentUser ? currentUser.full_name : 'Staff';
             const staffId = currentUser ? currentUser.user_id : 'STF-2201';
             const residentName = await getResidentName(userId);
@@ -4428,8 +4584,8 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                     }
                     card.innerHTML = `
                         <div>
-                            <p class="font-bold text-sm font-display">${p.payment_method}</p>
-                            <p class="text-white/50 text-[11px]">${p.reference_number}</p>
+                            <p class="font-bold text-sm font-display">${escapeHtml(p.payment_method)}</p>
+                            <p class="text-white/50 text-[11px]">${escapeHtml(p.reference_number)}</p>
                             ${p.status === 'Verified' ? '<p class="text-blue-200 text-[10px] font-bold mt-1"><i class="fa-solid fa-receipt mr-1"></i>View receipt</p>' : ''}
                             ${p.status === 'Rejected' && p.reject_reason ? '<p class="text-red-200 text-[10px] mt-1 max-w-[170px]">Reason: ' + escapeHtml(p.reject_reason) + '</p>' : ''}
                         </div>
@@ -4487,79 +4643,498 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             if (cutoff) auditQuery += `&created_at=gt.${encodeURIComponent(cutoff)}`;
 
             const logs = await dbFetch('audit_logs', { method: 'GET', query: auditQuery });
-            const nameMap = await getUserNameMap();
+            auditCache = Array.isArray(logs) ? logs : [];
+            auditNameMap = await getUserNameMap();
 
+            const sel = document.getElementById('auditActionFilter');
+            if (sel) {
+                const prev = sel.value;
+                const actions = [...new Set(auditCache.map(l => l.action).filter(Boolean))].sort();
+                sel.innerHTML = '<option value="">All actions</option>' + actions.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
+                sel.value = actions.includes(prev) ? prev : '';
+            }
+            renderAuditLogs();
+        }
+        function renderAuditLogs() {
             const table = document.getElementById('auditTrailTable');
             if (!table) return;
+            const term = (document.getElementById('auditSearch').value || '').trim().toLowerCase();
+            const actionF = document.getElementById('auditActionFilter').value;
+            const resultF = document.getElementById('auditResultFilter').value;
+            const fromV = document.getElementById('auditFrom').value;
+            const toV = document.getElementById('auditTo').value;
+            const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-            if (logs && Array.isArray(logs) && logs.length > 0) {
-                table.innerHTML = '';
-                
-                let lastMonthKey = null;
-                logs.forEach(log => {
-                    const dm = log.created_at ? new Date(log.created_at) : new Date();
-                    const monthKey = `${dm.getFullYear()}-${String(dm.getMonth() + 1).padStart(2, '0')}`;
-                    if (monthKey !== lastMonthKey) {
-                        lastMonthKey = monthKey;
-                        const headerRow = document.createElement('tr');
-                        headerRow.className = 'cursor-pointer select-none';
-                        headerRow.setAttribute('data-month-header', monthKey);
-                        headerRow.setAttribute('data-collapsed', '0');
-                        headerRow.onclick = () => toggleAuditMonth(monthKey);
-                        headerRow.innerHTML = `<td colspan="4" class="py-2 px-3 bg-orbis-off text-orbis-navy font-bold text-[11px] uppercase tracking-wider border-b border-gray-200"><i class="fa-solid fa-chevron-down mr-2 text-[10px]"></i>${dm.toLocaleString('en-US', { month: 'long', year: 'numeric' })}</td>`;
-                        table.appendChild(headerRow);
+            const rows = auditCache.filter(log => {
+                const act = log.action || '';
+                const result = log.result || inferAuditResult(act);
+                if (actionF && act !== actionF) return false;
+                if (resultF && result !== resultF) return false;
+                const d = log.created_at ? new Date(log.created_at) : null;
+                if (d && fromV && dayKey(d) < fromV) return false;
+                if (d && toV && dayKey(d) > toV) return false;
+                if (term) {
+                    const who = log.user_id && auditNameMap[log.user_id] ? auditNameMap[log.user_id] : '';
+                    const text = `${who} ${log.user_role || ''} ${act} ${log.details || ''}`.toLowerCase();
+                    if (!text.includes(term)) return false;
+                }
+                return true;
+            });
+
+            if (rows.length === 0) {
+                const filtered = term || actionF || resultF || fromV || toV;
+                const emptyMsg = filtered ? 'No records match these filters.' : (getAuditCutoff() ? 'Nothing here yet. New activity will show up here.' : 'No activity has been recorded yet.');
+                table.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-gray-400">${emptyMsg}</td></tr>`;
+                return;
+            }
+            table.innerHTML = '';
+            let lastMonthKey = null;
+            rows.forEach(log => {
+                const dm = log.created_at ? new Date(log.created_at) : new Date();
+                const monthKey = `${dm.getFullYear()}-${String(dm.getMonth() + 1).padStart(2, '0')}`;
+                if (monthKey !== lastMonthKey) {
+                    lastMonthKey = monthKey;
+                    const headerRow = document.createElement('tr');
+                    headerRow.className = 'cursor-pointer select-none';
+                    headerRow.setAttribute('data-month-header', monthKey);
+                    headerRow.setAttribute('data-collapsed', '0');
+                    headerRow.onclick = () => toggleAuditMonth(monthKey);
+                    headerRow.innerHTML = `<td colspan="7" class="py-2 px-3 bg-orbis-off text-orbis-navy font-bold text-[11px] uppercase tracking-wider border-b border-gray-200"><i class="fa-solid fa-chevron-down mr-2 text-[10px]"></i>${dm.toLocaleString('en-US', { month: 'long', year: 'numeric' })}</td>`;
+                    table.appendChild(headerRow);
+                }
+                const timeStr = log.created_at
+                    ? `${dayKey(dm)} ${String(dm.getHours()).padStart(2, '0')}:${String(dm.getMinutes()).padStart(2, '0')}`
+                    : 'Just now';
+
+                const act = log.action || '';
+                const result = log.result || inferAuditResult(act);
+                let badgeClass = 'bg-blue-100 text-blue-700';
+                if (act.includes('Admin Login')) badgeClass = 'bg-indigo-100 text-indigo-700';
+                else if (act.includes('Logout')) badgeClass = 'bg-gray-100 text-gray-700';
+                else if (/Cut-Off|Reject|Warning|Fail|Blocked|Unauthorized|Locked|Deactivated|Terminated/.test(act)) badgeClass = 'bg-red-100 text-red-700';
+                else if (/Registration|Initialization|Activated|Unlocked|Verified/.test(act)) badgeClass = 'bg-green-100 text-green-700';
+
+                const userRole = ` (${normalizeRole(log.user_role)})`;
+                let who;
+                if (log.user_id && auditNameMap[log.user_id]) who = `${auditNameMap[log.user_id]}${userRole}`;
+                else if (log.user_id) who = `User ID ${log.user_id}${userRole}`;
+                else who = `Unknown${userRole}`;
+
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-100 hover:bg-gray-50/50 transition-colors';
+                row.innerHTML = `
+                    <td class="py-2.5 px-3 whitespace-nowrap text-gray-500 font-mono text-[11px]">${timeStr}</td>
+                    <td class="py-2.5 px-3 font-semibold text-orbis-navy whitespace-nowrap">${escapeHtml(who)}</td>
+                    <td class="py-2.5 px-3 whitespace-nowrap"><span class="${badgeClass} px-2 py-0.5 rounded-full font-bold text-[10px]">${escapeHtml(act)}</span></td>
+                    <td class="py-2.5 px-3 whitespace-nowrap text-gray-600">${escapeHtml(log.module || inferAuditModule(act))}</td>
+                    <td class="py-2.5 px-3 text-gray-600">${escapeHtml(log.details || '')}</td>
+                    <td class="py-2.5 px-3 whitespace-nowrap font-mono text-[11px] text-gray-500">${escapeHtml(log.ip_address || 'unknown')}</td>
+                    <td class="py-2.5 px-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded-full font-bold text-[10px] ${result === 'Failure' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">${escapeHtml(result)}</span></td>
+                `;
+                row.setAttribute('data-month', monthKey);
+                table.appendChild(row);
+            });
+        }
+
+        // =====================================================================
+        // SECURITY BLOCK: validation, sessions, OTP, role checks, confirmations
+        // =====================================================================
+
+        // ---- Input cleaning and validation (the database repeats these rules on the server) ----
+        function cleanText(v, max = 120) {
+            return String(v || '').replace(/[<>]/g, '').replace(/[\u0000-\u001F\u007F]/g, '').replace(/\s+/g, ' ').trim().slice(0, max);
+        }
+        function isValidEmail(v) { return v.length <= 100 && /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/.test(v); }
+        function isValidMobile(v) { return /^(\+?63|0)9\d{9}$/.test(String(v).replace(/[\s-]/g, '')); }
+        function isValidName(v) { return /^[A-Za-zÀ-ɏ][A-Za-zÀ-ɏ .'-]{1,59}$/.test(v); }
+        function isValidAccountNo(v) { return /^[A-Za-z0-9-]{3,20}$/.test(v); }
+
+        // ---- Role check for actions (the real check must also be on the server, see the SQL file) ----
+        function requireRole(roles) {
+            const list = Array.isArray(roles) ? roles : [roles];
+            const have = currentUser ? (currentUser.role || 'Consumer') : null;
+            if (have && list.includes(have)) return true;
+            addAuditRow(currentUser ? currentUser.user_id : null, have || 'Guest', 'Unauthorized Access',
+                'Blocked an action that needs the ' + list.join('/') + ' role', 'red', 'Failure');
+            showToast('You are not allowed to do that.', 'error');
+            return false;
+        }
+
+        // ---- Confirmation box for sensitive actions ----
+        let confirmAction = null;
+        function askConfirm(title, text, okLabel, action) {
+            confirmAction = action;
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmText').textContent = text;
+            document.getElementById('confirmOkBtn').textContent = okLabel || 'Confirm';
+            openModal('confirmModal');
+        }
+        function runConfirmed() {
+            const fn = confirmAction; confirmAction = null;
+            closeModal('confirmModal');
+            if (fn) fn();
+        }
+
+        // ---- Sessions: every login gets a random token saved in user_sessions ----
+        async function startSession(u) {
+            const t = Array.from(crypto.getRandomValues(new Uint8Array(24)), b => b.toString(16).padStart(2, '0')).join('');
+            const r = await dbFetch('user_sessions', { method: 'POST', body: { user_id: u.user_id, session_token: t, ip_address: clientIp } });
+            sessionToken = (r && r.length) ? t : null;
+        }
+        async function endAllSessions(userId) {
+            return dbFetch('user_sessions', { method: 'PATCH', query: `user_id=eq.${userId}&ended_at=is.null`, body: { ended_at: new Date().toISOString() } });
+        }
+        async function endOtherSessions(userId) {
+            const keep = sessionToken ? `&session_token=neq.${sessionToken}` : '';
+            return dbFetch('user_sessions', { method: 'PATCH', query: `user_id=eq.${userId}&ended_at=is.null${keep}`, body: { ended_at: new Date().toISOString() } });
+        }
+        // every 10 seconds: was this session closed (password change, Admin action) or is the account no longer allowed?
+        let sessionPollBusy = false;
+        setInterval(async () => {
+            if (!currentUser || !sessionToken || sessionPollBusy) return;
+            sessionPollBusy = true;
+            try {
+                const me = currentUser;
+                const s = await dbFetch('user_sessions', { method: 'GET', query: `session_token=eq.${sessionToken}&select=ended_at` });
+                if (s && s.length && s[0].ended_at) {
+                    endSessionLocally();
+                    return showToast('Your session was closed. Please log in again.', 'info');
+                }
+                const u = await dbFetch('users', { method: 'GET', query: `user_id=eq.${me.user_id}&select=status,is_locked,role` });
+                if (u && u.length) {
+                    const r = u[0];
+                    if ((r.status || 'Active') === 'Inactive' || r.is_locked || (r.role || 'Consumer') !== (me.role || 'Consumer')) {
+                        addAuditRow(me.user_id, me.role, 'Session Terminated', 'Account was deactivated, locked or changed by the Admin', 'red', 'Success');
+                        endSessionLocally();
+                        showToast('Your account was changed by the Admin. Please log in again.', 'info');
                     }
+                }
+            } finally { sessionPollBusy = false; }
+        }, 10000);
 
-                    let timeStr = 'Just now';
-                    if (log.created_at) {
-                        const d = new Date(log.created_at);
-                        const yr = d.getFullYear();
-                        const mo = String(d.getMonth() + 1).padStart(2, '0');
-                        const da = String(d.getDate()).padStart(2, '0');
-                        const hr = String(d.getHours()).padStart(2, '0');
-                        const mi = String(d.getMinutes()).padStart(2, '0');
-                        timeStr = `${yr}-${mo}-${da} ${hr}:${mi}`;
-                    }
+        // ---- Live lockout countdown ----
+        function updateLockBanner() {
+            const b = document.getElementById('lockBanner');
+            const locked = !!(lockoutUntil && lockoutUntil > new Date() && !currentUser);
+            if (locked) {
+                const s = Math.ceil((lockoutUntil - new Date()) / 1000);
+                b.textContent = `Locked: try again in ${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+            }
+            b.classList.toggle('hidden', !locked);
+            ['loginSubmitBtn', 'staffLoginBtn', 'adminLoginBtn'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) { btn.disabled = locked; btn.classList.toggle('opacity-50', locked); }
+            });
+        }
+        setInterval(updateLockBanner, 1000);
 
-                    const act = log.action || '';
-                    let badgeClass = 'bg-blue-100 text-blue-700';
-                    if (act.includes('Login') || act.includes('Approved') || act.includes('Verified')) {
-                        badgeClass = 'bg-blue-100 text-blue-700';
-                        if (act.includes('Admin Login')) badgeClass = 'bg-indigo-100 text-indigo-700';
-                    } else if (act.includes('Logout')) {
-                        badgeClass = 'bg-gray-100 text-gray-700';
-                    } else if (act.includes('Cut-Off') || act.includes('Reject') || act.includes('Warning')) {
-                        badgeClass = 'bg-red-100 text-red-700';
-                    } else if (act.includes('Registration') || act.includes('Initialization')) {
-                        badgeClass = 'bg-green-100 text-green-700';
-                    }
+        // ---- OTP: expires in 10 min, one use, max 5 wrong tries, 60 s before a resend ----
+        const OTP_MAX_ATTEMPTS = 5, OTP_RESEND_SECONDS = 60, OTP_TTL_MIN = 10;
+        function otpRoleLabel(userId) { return (currentUser && currentUser.user_id === userId) ? currentUser.role : 'Consumer'; }
+        function otpCooldownLeft(userId, purpose) {
+            try {
+                const m = JSON.parse(localStorage.getItem('orbisOtpCooldown') || '{}');
+                const t = m[userId + ':' + purpose];
+                return t ? Math.max(0, Math.ceil((OTP_RESEND_SECONDS * 1000 - (Date.now() - t)) / 1000)) : 0;
+            } catch (e) { return 0; }
+        }
+        function setOtpCooldown(userId, purpose) {
+            try {
+                const m = JSON.parse(localStorage.getItem('orbisOtpCooldown') || '{}');
+                m[userId + ':' + purpose] = Date.now();
+                localStorage.setItem('orbisOtpCooldown', JSON.stringify(m));
+            } catch (e) {}
+        }
+        async function issueOtp(userId, purpose, newEmail) {
+            let left = otpCooldownLeft(userId, purpose);
+            if (!left) {   // the database remembers the last code too, so clearing the browser does not skip the wait
+                const last = await dbFetch('otp_codes', { method: 'GET', query: `user_id=eq.${userId}&purpose=eq.${purpose}&select=created_at&order=created_at.desc&limit=1` });
+                if (last && last.length && last[0].created_at) {
+                    const age = (Date.now() - new Date(last[0].created_at).getTime()) / 1000;
+                    if (age >= 0 && age < OTP_RESEND_SECONDS) left = Math.ceil(OTP_RESEND_SECONDS - age);
+                }
+            }
+            if (left > 0) {
+                showToast(`Please wait ${left}s before asking for a new code.`, 'error');
+                addAuditRow(userId, otpRoleLabel(userId), 'OTP Resend Blocked', `A new ${purpose} code was asked too soon`, 'red', 'Failure');
+                return null;
+            }
+            const code = String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
+            await dbFetch('otp_codes', { method: 'PATCH', query: `user_id=eq.${userId}&is_used=eq.false`, body: { is_used: true } });   // older codes stop working
+            const saved = await dbFetch('otp_codes', {
+                method: 'POST',
+                body: { user_id: userId, otp_code: code, expires_at: new Date(Date.now() + OTP_TTL_MIN * 60000).toISOString(), is_used: false, attempts: 0, purpose: purpose, new_email: newEmail || null }
+            });
+            if (!saved) { showToast('Could not create the OTP. Please try again.', 'error'); return null; }
+            setOtpCooldown(userId, purpose);
+            addAuditRow(userId, otpRoleLabel(userId), 'OTP Requested', `A one-time code was created (${purpose})`, 'blue');
+            return code;
+        }
+        async function verifyOtpCode(userId, purpose, input) {
+            const now = encodeURIComponent(new Date().toISOString());
+            const rows = await dbFetch('otp_codes', {
+                method: 'GET',
+                query: `user_id=eq.${userId}&purpose=eq.${purpose}&is_used=eq.false&expires_at=gt.${now}&order=expires_at.desc&limit=1`
+            });
+            const role = otpRoleLabel(userId);
+            if (rows === null) return { ok: false, msg: 'Could not check the code. Please try again.' };
+            if (rows.length === 0) {
+                addAuditRow(userId, role, 'OTP Failed', `No active ${purpose} code (expired or already used)`, 'red');
+                return { ok: false, msg: 'This code is expired or already used. Please request a new one.' };
+            }
+            const row = rows[0];
+            const filter = `user_id=eq.${userId}&otp_code=eq.${encodeURIComponent(row.otp_code)}&is_used=eq.false`;
+            const used = row.attempts || 0;
+            if (used >= OTP_MAX_ATTEMPTS) {
+                await dbFetch('otp_codes', { method: 'PATCH', query: filter, body: { is_used: true } });
+                return { ok: false, msg: 'Too many wrong tries. Please request a new code.' };
+            }
+            if (row.otp_code === input) {
+                const done = await dbFetch('otp_codes', { method: 'PATCH', query: filter, body: { is_used: true } });
+                if (!done || done.length === 0) return { ok: false, msg: 'This code was already used.' };
+                addAuditRow(userId, role, 'OTP Verified', `One-time code accepted (${purpose})`, 'green');
+                return { ok: true, row: row };
+            }
+            const n = used + 1, locked = n >= OTP_MAX_ATTEMPTS;
+            await dbFetch('otp_codes', { method: 'PATCH', query: filter, body: { attempts: n, is_used: locked } });
+            addAuditRow(userId, role, 'OTP Failed', `Wrong code (${n}/${OTP_MAX_ATTEMPTS}) for ${purpose}`, 'red');
+            if (locked) addAuditRow(userId, role, 'OTP Locked', `Too many wrong tries for ${purpose}; the code was cancelled`, 'red');
+            return { ok: false, msg: locked ? 'Too many wrong tries. This code is cancelled. Please request a new one.' : `Wrong code. ${OTP_MAX_ATTEMPTS - n} attempt(s) left.` };
+        }
 
-                    const userRole = ` (${normalizeRole(log.user_role)})`;
-                    let userIdDisplay;
-                    if (log.user_id && nameMap[log.user_id]) {
-                        userIdDisplay = `${nameMap[log.user_id]}${userRole}`;
-                    } else if (log.user_id) {
-                        userIdDisplay = `User ID ${log.user_id}${userRole}`;
-                    } else {
-                        userIdDisplay = `Unknown${userRole}`;
-                    }
-
-                    const row = document.createElement('tr');
-                    row.className = 'border-b border-gray-100 hover:bg-gray-50/50 transition-colors';
-                    row.innerHTML = `
-                        <td class="py-2.5 px-3 whitespace-nowrap text-gray-500 font-mono text-[11px]">${timeStr}</td>
-                        <td class="py-2.5 px-3 font-semibold text-orbis-navy whitespace-nowrap">${escapeHtml(userIdDisplay)}</td>
-                        <td class="py-2.5 px-3 whitespace-nowrap"><span class="${badgeClass} px-2 py-0.5 rounded-full font-bold text-[10px]">${escapeHtml(act)}</span></td>
-                        <td class="py-2.5 px-3 text-gray-600">${escapeHtml(log.details || '')}</td>
-                    `;
-                    row.setAttribute('data-month', monthKey);
-                    table.appendChild(row);
-                });
-            } else {
-                const emptyMsg = cutoff ? 'Nothing here yet. New activity will show up here.' : 'No activity has been recorded yet.';
-                table.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-400">${emptyMsg}</td></tr>`;
+        // popup that asks for a code (used for first-login verification and for changing the email)
+        function requestOtpChallenge(userId, purpose, title, newEmail) {
+            return new Promise(async (resolve) => {
+                const code = await issueOtp(userId, purpose, newEmail);
+                if (!code) return resolve(false);
+                otpChallenge = { userId, purpose, newEmail, resolve };
+                document.getElementById('ocTitle').textContent = title;
+                document.getElementById('ocCode').textContent = code;
+                document.getElementById('ocInput').value = '';
+                openModal('otpChallengeModal');
+            });
+        }
+        async function submitOtpChallenge() {
+            if (!otpChallenge) return;
+            const input = document.getElementById('ocInput').value.trim();
+            if (!/^\d{6}$/.test(input)) return showToast('Enter the 6-digit code.', 'error');
+            const res = await verifyOtpCode(otpChallenge.userId, otpChallenge.purpose, input);
+            if (!res.ok) return showToast(res.msg, 'error');
+            if (otpChallenge.purpose === 'email' && res.row.new_email !== otpChallenge.newEmail) {
+                return showToast('This code was made for a different email.', 'error');
+            }
+            const c = otpChallenge; otpChallenge = null;
+            closeModal('otpChallengeModal');
+            c.resolve(true);
+        }
+        async function resendOtpChallenge() {
+            if (!otpChallenge) return;
+            const code = await issueOtp(otpChallenge.userId, otpChallenge.purpose, otpChallenge.newEmail);
+            if (code) {
+                document.getElementById('ocCode').textContent = code;
+                document.getElementById('ocInput').value = '';
+                showToast('A new code was created.', 'success');
             }
         }
+        function cancelOtpChallenge() {
+            const c = otpChallenge; otpChallenge = null;
+            closeModal('otpChallengeModal');
+            if (c) c.resolve(false);
+        }
+
+        // ---- Change email (needs the password, then an OTP sent to the NEW email) ----
+        function openChangeEmail() {
+            if (!currentUser) return;
+            document.getElementById('ceCurrent').textContent = currentUser.email || 'none yet';
+            document.getElementById('ceNew').value = '';
+            document.getElementById('cePass').value = '';
+            openModal('changeEmailModal');
+        }
+        async function submitChangeEmail(e) {
+            e.preventDefault();
+            if (!currentUser) return;
+            const email = document.getElementById('ceNew').value.trim().toLowerCase();
+            const pass = document.getElementById('cePass').value;
+            if (!email || !pass) return showToast('Please fill in all fields.', 'error');
+            if (!isValidEmail(email)) return showToast('Please enter a valid email address.', 'error');
+            if (email === (currentUser.email || '').toLowerCase()) return showToast('That is already your email.', 'error');
+            if (!(await verifyPassword(pass, currentUser.password_hash))) {
+                addAuditRow(currentUser.user_id, currentUser.role, 'Email Change Failed', 'Wrong current password entered', 'red', 'Failure');
+                return showToast('Current password is not correct.', 'error');
+            }
+            const used = await dbFetch('users', { method: 'GET', query: `email=eq.${encodeURIComponent(email)}&user_id=neq.${currentUser.user_id}&select=user_id` });
+            if (used === null) return showToast('Could not check the email. Please try again.', 'error');
+            if (used.length > 0) return showToast('That email is already used by another account.', 'error');
+
+            closeModal('changeEmailModal');
+            const uid = currentUser.user_id, role = currentUser.role, oldEmail = currentUser.email || 'none';
+            const ok = await requestOtpChallenge(uid, 'email', 'Verify your new email', email);
+            if (!ok) {
+                addAuditRow(uid, role, 'Email Change Failed', 'The new email was not verified', 'red', 'Failure');
+                return showToast('Email was not changed.', 'error');
+            }
+            const done = await dbFetch('users', { method: 'PATCH', query: `user_id=eq.${uid}`, body: { email: email } });
+            if (!done || done.length === 0) return showToast('Could not save the new email. Please try again.', 'error');
+            if (currentUser && currentUser.user_id === uid) {
+                currentUser.email = email;
+                const pe = document.getElementById('pEmail'); if (pe) pe.textContent = email;
+            }
+            addAuditRow(uid, role, 'Email Changed', `Email changed from ${oldEmail} to ${email} (verified with OTP)`, 'blue');
+            notifyUser(uid, 'Your account email was changed. If this was not you, contact the office.');
+            showToast('Email changed and verified.', 'success');
+        }
+
+        // ---- Admin: account management (edit, activate/deactivate, lock/unlock, change role) ----
+        let editingUser = null;
+        function userIsLocked(u) { return !!(u.is_locked || (u.lockout_until && new Date(u.lockout_until) > new Date())); }
+        function userStatusBadges(u) {
+            const inactive = (u.status || 'Active') === 'Inactive';
+            let h = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${inactive ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}">${inactive ? 'Inactive' : 'Active'}</span>`;
+            if (userIsLocked(u)) h += ' <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">Locked</span>';
+            if (u.is_verified === false) h += ' <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">Unverified</span>';
+            return h;
+        }
+        function adminUserButtons(u) {
+            const nm = escapeHtml(u.full_name || '');
+            const inactive = (u.status || 'Active') === 'Inactive';
+            const locked = !!u.is_locked;
+            const b = (cls, icon, label, fn) => `<button data-name="${nm}" onclick="${fn}" class="${cls} font-bold px-2 py-1 rounded-lg text-[11px] mr-1 mb-1"><i class="fa-solid ${icon} mr-1"></i>${label}</button>`;
+            return b('bg-blue-100 hover:bg-blue-200 text-blue-700', 'fa-pen', 'Edit', `openEditUser(${u.user_id})`)
+                + b(inactive ? 'bg-green-100 hover:bg-green-200 text-green-700' : 'bg-gray-100 hover:bg-gray-200 text-gray-700', inactive ? 'fa-user-check' : 'fa-user-slash', inactive ? 'Activate' : 'Deactivate', `adminSetStatus(${u.user_id}, this.dataset.name, '${inactive ? 'Active' : 'Inactive'}')`)
+                + b(locked ? 'bg-green-100 hover:bg-green-200 text-green-700' : 'bg-amber-100 hover:bg-amber-200 text-amber-700', locked ? 'fa-lock-open' : 'fa-lock', locked ? 'Unlock' : 'Lock', `adminSetLock(${u.user_id}, this.dataset.name, ${!locked})`);
+        }
+        function adminSetStatus(userId, name, newStatus) {
+            if (!requireRole('Admin')) return;
+            if (currentUser && currentUser.user_id === userId) return showToast('You cannot change your own account here.', 'error');
+            const off = newStatus === 'Inactive';
+            askConfirm(off ? 'Deactivate account?' : 'Activate account?',
+                off ? `${name} will be logged out and cannot log in until you activate the account again.` : `${name} will be able to log in again.`,
+                off ? 'Deactivate' : 'Activate', async () => {
+                    const done = await dbFetch('users', { method: 'PATCH', query: `user_id=eq.${userId}&role=neq.Admin`, body: { status: newStatus } });
+                    if (!done || done.length === 0) return showToast('Could not change the account status.', 'error');
+                    if (off) await endAllSessions(userId);
+                    addAuditRow(currentUser.user_id, 'Admin', off ? 'Account Deactivated' : 'Account Activated', `${name} (ID ${userId})`, off ? 'red' : 'green', 'Success');
+                    showToast(`${name} was ${off ? 'deactivated' : 'activated'}.`, 'success');
+                    loadAdminData();
+                });
+        }
+        function adminSetLock(userId, name, lock) {
+            if (!requireRole('Admin')) return;
+            if (currentUser && currentUser.user_id === userId) return showToast('You cannot change your own account here.', 'error');
+            askConfirm(lock ? 'Lock account?' : 'Unlock account?',
+                lock ? `${name} will be logged out and cannot log in until you unlock the account.` : `${name} can log in again and the failed-attempt counter is cleared.`,
+                lock ? 'Lock' : 'Unlock', async () => {
+                    const body = lock ? { is_locked: true } : { is_locked: false, failed_attempts: 0, lockout_until: null };
+                    const done = await dbFetch('users', { method: 'PATCH', query: `user_id=eq.${userId}&role=neq.Admin`, body: body });
+                    if (!done || done.length === 0) return showToast('Could not change the lock.', 'error');
+                    if (lock) await endAllSessions(userId);
+                    addAuditRow(currentUser.user_id, 'Admin', lock ? 'Account Locked' : 'Account Unlocked', `${name} (ID ${userId})`, lock ? 'red' : 'green', 'Success');
+                    showToast(`${name} was ${lock ? 'locked' : 'unlocked'}.`, 'success');
+                    loadAdminData();
+                });
+        }
+        function openEditUser(userId) {
+            if (!requireRole('Admin')) return;
+            const u = directoryUsers.find(x => x.user_id === userId);
+            if (!u || u.role === 'Admin') return;
+            editingUser = u;
+            document.getElementById('euName').value = u.full_name || '';
+            document.getElementById('euEmail').value = u.email || '';
+            document.getElementById('euMobile').value = u.mobile_number || '';
+            document.getElementById('euAddress').value = u.address || '';
+            document.getElementById('euRole').value = u.role || 'Consumer';
+            openModal('editUserModal');
+        }
+        async function saveUserEdit(e) {
+            e.preventDefault();
+            if (!requireRole('Admin') || !editingUser) return;
+            const name = cleanText(document.getElementById('euName').value, 60);
+            const email = document.getElementById('euEmail').value.trim().toLowerCase();
+            const mobile = document.getElementById('euMobile').value.trim();
+            const addr = cleanText(document.getElementById('euAddress').value, 120);
+            const role = document.getElementById('euRole').value;
+            if (!name || !mobile || !addr) return showToast('Please fill in the name, mobile number and address.', 'error');
+            if (!isValidName(name)) return showToast('Full name can only have letters, spaces, . \' and -.', 'error');
+            if (!isValidMobile(mobile)) return showToast('Please enter a valid mobile number (09xx xxx xxxx).', 'error');
+            if (email && !isValidEmail(email)) return showToast('Please enter a valid email address.', 'error');
+            if (!['Consumer', 'MeterReader'].includes(role)) return showToast('Invalid role.', 'error');
+            if (email) {
+                const used = await dbFetch('users', { method: 'GET', query: `email=eq.${encodeURIComponent(email)}&user_id=neq.${editingUser.user_id}&select=user_id` });
+                if (used === null) return showToast('Could not check the email. Please try again.', 'error');
+                if (used.length > 0) return showToast('That email is already used by another account.', 'error');
+            }
+            const target = editingUser;
+            const payload = { full_name: name, email: email || null, mobile_number: mobile, address: addr, role: role };
+            closeModal('editUserModal');
+            const apply = async () => {
+                const done = await dbFetch('users', { method: 'PATCH', query: `user_id=eq.${target.user_id}&role=neq.Admin`, body: payload });
+                if (!done || done.length === 0) return showToast('Could not save the changes. Please try again.', 'error');
+                addAuditRow(currentUser.user_id, 'Admin', 'User Updated', `Updated details of ${name} (ID ${target.user_id})`, 'blue', 'Success');
+                if (role !== target.role) {
+                    await endAllSessions(target.user_id);
+                    addAuditRow(currentUser.user_id, 'Admin', 'Role Changed', `${name} (ID ${target.user_id}): ${normalizeRole(target.role)} to ${normalizeRole(role)}`, 'red', 'Success');
+                    notifyUser(target.user_id, `Your account role was changed to ${normalizeRole(role)}. Please log in again.`);
+                }
+                showToast('User updated.', 'success');
+                loadAdminData();
+            };
+            if (role !== target.role) {
+                askConfirm('Change role?', `${name} will change from ${normalizeRole(target.role)} to ${normalizeRole(role)} and will be logged out.`, 'Change role', apply);
+            } else {
+                apply();
+            }
+        }
+
+        // ---- Audit log: filters ----
+        let auditCache = [], auditNameMap = {};
+        const AUDIT_MODULE_RULES = [
+            [/Login|Logout|Lockout|CAPTCHA|Account Verif|Session/i, 'Authentication'],
+            [/Unauthorized/i, 'Access Control'],
+            [/OTP|Password|Email/i, 'Account Security'],
+            [/Backup/i, 'Backup & Recovery'],
+            [/Rates/i, 'Settings'],
+            [/Payment|Receipt/i, 'Payments'],
+            [/Bill|Cut-Off|Warning|Surcharge/i, 'Billing'],
+            [/Role|User|Staff|Profile|Registration|Account/i, 'User Management']
+        ];
+        function inferAuditModule(action) {
+            const hit = AUDIT_MODULE_RULES.find(r => r[0].test(action || ''));
+            return hit ? hit[1] : 'System';
+        }
+        function inferAuditResult(action) {
+            return /Fail|Lockout Triggered|Blocked|Unauthorized|Denied|OTP Locked/i.test(action || '') ? 'Failure' : 'Success';
+        }
+        function clearAuditFilters() {
+            ['auditSearch', 'auditActionFilter', 'auditResultFilter', 'auditFrom', 'auditTo'].forEach(id => document.getElementById(id).value = '');
+            renderAuditLogs();
+        }
+
+        // ---- Sensitive actions ask for confirmation first ----
+        function flagForDisconnection() {
+            if (!selectedCustomer) return;
+            askConfirm('Flag for disconnection?', `A cut-off request for ${selectedCustomer.name} will be sent to the Admin.`, 'Flag', () => _flagForDisconnection());
+        }
+        function adminApproveCutoff(billId, userId) {
+            askConfirm('Authorize water cut-off?', 'The resident will be notified and the bill is marked Cut-Off.', 'Authorize', () => _adminApproveCutoff(billId, userId));
+        }
+        function adminApprovePayment(paymentId, userId, amount) {
+            askConfirm('Give final approval?', `Payment PAY-${paymentId} (₱${amount}) will be verified and the bill marked as Paid.`, 'Approve', () => _adminApprovePayment(paymentId, userId, amount));
+        }
+        function approveAllBills() {
+            if (pendingBillsQueue.length === 0) return showToast('No new bills waiting for approval.', 'info');
+            askConfirm('Approve all bills?', `${pendingBillsQueue.length} bill(s) will be published to the residents.`, 'Approve all', () => _approveAllBills());
+        }
+        function saveRates() {
+            askConfirm('Save the new rates?', 'New bills and payments will use these rates right away.', 'Save', () => _saveRates());
+        }
+        function issueCutoffWarning(billId, userId, actionType) {
+            if (actionType === 'cutoff_request') {
+                askConfirm('Request a cut-off?', 'The request will be sent to the Admin for authorization.', 'Request', () => _issueCutoffWarning(billId, userId, actionType));
+            } else {
+                _issueCutoffWarning(billId, userId, actionType);
+            }
+        }
+
         setInterval(() => {
             const now = new Date();
             let h = now.getHours() % 12 || 12;
