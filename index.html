@@ -2732,7 +2732,7 @@
         function getBarangay(address) {
             if (!address) return 'No barangay';
             const m = address.match(/(?:brgy\.?|barangay)\s*,?\s*([^,]+)/i);
-            if (m && m[1].trim()) return m[1].trim().replace(/\s+/g, ' ');
+            if (m && m[1].trim()) return m[1].trim().replace(/\s+/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
             return 'No barangay';
         }
         function renderStaffTable() {
