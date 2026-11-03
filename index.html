@@ -653,6 +653,18 @@
 
                 
 
+                <div class="demo-only mb-5 bg-white/10 p-3 rounded-2xl">
+                    <p class="text-[10px] text-orbis-light font-bold uppercase text-center mb-2">Supabase Registered Accounts</p>
+                    <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+                        <button type="button" onclick="fillDemo('12554368', 'Password123!')" class="bg-white/15 hover:bg-white/25 text-white py-1.5 px-2 rounded-lg text-left truncate">
+                            <i class="fa-solid fa-user mr-1 text-[10px]"></i>Rico Ramos
+                        </button>
+                        <button type="button" onclick="fillDemo('KT-123', 'Password123!')" class="bg-white/15 hover:bg-white/25 text-white py-1.5 px-2 rounded-lg text-left truncate">
+                            <i class="fa-solid fa-user mr-1 text-[10px]"></i>Katarina Son
+                        </button>
+                    </div>
+                </div>
+
                 <form id="loginForm" class="flex flex-col gap-4">
                     <div>
                         <label class="block text-xs font-bold text-orbis-light uppercase tracking-wider mb-2 ml-1">Water Account Number</label>
@@ -818,7 +830,11 @@
 
                     
 
-                    <form id="staffLoginForm" class="w-full flex flex-col gap-4">
+                    <button type="button" data-demo="1" onclick="fillStaffDemo('STF-2201', 'Password123!')" class="demo-only w-full mb-4 bg-orbis-navy/10 border border-orbis-navy/20 py-2 px-3 rounded-xl text-xs font-semibold text-orbis-navy hover:bg-orbis-navy/20 transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-user-check"></i> Fill Staff Demo: Faye Santos (STF-2201)
+                    </button>
+
+                <form id="staffLoginForm" class="w-full flex flex-col gap-4">
                         <div class="bg-white rounded-2xl p-3.5 shadow-sm">
                             <label class="block text-xs font-semibold text-orbis-navy/70 text-center mb-1.5">Staff ID</label>
                             <input type="text" id="staffId" class="w-full text-center px-3 py-2 border border-gray-200 rounded-lg text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy" placeholder="e.g. STF-2201">
@@ -938,7 +954,11 @@
 
                     
 
-                    <form id="adminLoginForm" class="w-full flex flex-col gap-4">
+                    <button type="button" data-demo="1" onclick="fillAdminDemo()" class="demo-only w-full mb-4 bg-orbis-navy/10 border border-orbis-navy/20 py-2 px-3 rounded-xl text-xs font-semibold text-orbis-navy hover:bg-orbis-navy/20 transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-shield-halved"></i> Fill Admin Demo (admin_ormoc)
+                    </button>
+
+                <form id="adminLoginForm" class="w-full flex flex-col gap-4">
                         <div class="bg-white rounded-2xl p-3.5 shadow-sm">
                             <label class="block text-xs font-semibold text-orbis-navy/70 text-center mb-1.5">Admin ID / Water Account</label>
                             <input type="text" id="adminUser" class="w-full text-center px-3 py-2 border border-gray-200 rounded-lg text-sm text-orbis-navy placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orbis-navy" placeholder="e.g. admin_ormoc">
@@ -1804,6 +1824,24 @@
                 users.forEach(u => { map[u.user_id] = u.full_name; });
             }
             return map;
+        }
+        // Demo shortcuts on the login screens. Set DEMO_MODE to false to hide them (they show demo passwords).
+        const DEMO_MODE = true;
+        document.querySelectorAll('.demo-only').forEach(el => el.classList.toggle('hidden', !DEMO_MODE));
+        function fillDemo(acct, pass) {
+            document.getElementById('loginUser').value = acct;
+            document.getElementById('loginPass').value = pass;
+            showToast('Demo credentials filled for account ' + acct, 'info');
+        }
+        function fillStaffDemo(id, pass) {
+            document.getElementById('staffId').value = id;
+            document.getElementById('staffPassword').value = pass;
+            showToast('Staff credentials filled for Faye Santos', 'info');
+        }
+        function fillAdminDemo() {
+            document.getElementById('adminUser').value = 'admin_ormoc';
+            document.getElementById('adminPass').value = 'Password123!';
+            showToast('Admin credentials filled', 'info');
         }
         function showToast(message, type = 'info') {
             const toast = document.getElementById('toast');
