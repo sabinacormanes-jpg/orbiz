@@ -1698,8 +1698,6 @@
                                 <input type="text" id="auditSearch" oninput="renderAuditLogs()" placeholder="Search user or details" class="flex-1 min-w-[160px] px-3 py-2 border rounded-xl text-xs text-orbis-navy focus:ring-2 focus:ring-orbis-navy">
                                 <select id="auditActionFilter" onchange="renderAuditLogs()" class="px-3 py-2 border rounded-xl text-xs text-orbis-navy"><option value="">All actions</option></select>
                                 <select id="auditResultFilter" onchange="renderAuditLogs()" class="px-3 py-2 border rounded-xl text-xs text-orbis-navy"><option value="">All results</option><option value="Success">Success</option><option value="Failure">Failure</option></select>
-                                <input type="date" id="auditFrom" onchange="renderAuditLogs()" class="px-3 py-2 border rounded-xl text-xs text-orbis-navy" title="From date">
-                                <input type="date" id="auditTo" onchange="renderAuditLogs()" class="px-3 py-2 border rounded-xl text-xs text-orbis-navy" title="To date">
                                 <button onclick="clearAuditFilters()" class="bg-gray-100 text-orbis-navy text-xs font-bold px-3 py-2 rounded-xl">Clear filters</button>
                             </div>
                             <div class="overflow-x-auto max-h-[520px] overflow-y-auto rounded-xl border border-gray-100">
@@ -4699,8 +4697,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             const term = (document.getElementById('auditSearch').value || '').trim().toLowerCase();
             const actionF = document.getElementById('auditActionFilter').value;
             const resultF = document.getElementById('auditResultFilter').value;
-            const fromV = document.getElementById('auditFrom').value;
-            const toV = document.getElementById('auditTo').value;
             const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
             const rows = auditCache.filter(log => {
@@ -4708,9 +4704,6 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
                 const result = log.result || inferAuditResult(act);
                 if (actionF && act !== actionF) return false;
                 if (resultF && result !== resultF) return false;
-                const d = log.created_at ? new Date(log.created_at) : null;
-                if (d && fromV && dayKey(d) < fromV) return false;
-                if (d && toV && dayKey(d) > toV) return false;
                 if (term) {
                     const who = log.user_id && auditNameMap[log.user_id] ? auditNameMap[log.user_id] : '';
                     const text = `${who} ${log.user_role || ''} ${act} ${log.details || ''}`.toLowerCase();
@@ -4720,7 +4713,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             });
 
             if (rows.length === 0) {
-                const filtered = term || actionF || resultF || fromV || toV;
+                const filtered = term || actionF || resultF;
                 const emptyMsg = filtered ? 'No records match these filters.' : (getAuditCutoff() ? 'Nothing here yet. New activity will show up here.' : 'No activity has been recorded yet.');
                 table.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-gray-400">${emptyMsg}</td></tr>`;
                 return;
@@ -5143,7 +5136,7 @@ async function handleFailedAttempt(account, roleLabel = 'Resident') {
             return /Fail|Lockout Triggered|Blocked|Unauthorized|Denied|OTP Locked/i.test(action || '') ? 'Failure' : 'Success';
         }
         function clearAuditFilters() {
-            ['auditSearch', 'auditActionFilter', 'auditResultFilter', 'auditFrom', 'auditTo'].forEach(id => document.getElementById(id).value = '');
+            ['auditSearch', 'auditActionFilter', 'auditResultFilter'].forEach(id => document.getElementById(id).value = '');
             renderAuditLogs();
         }
 
